@@ -28,7 +28,7 @@ if __name__ == '__main__':
 	p.add_argument('--num_epochs', type=int, default=2000)
 	p.add_argument('--batch_size', type=int, default=64)
 	p.add_argument('--aux_weight', type=float, default=0.001)
-	p.add_argument('--affi_weight', type=float, default=-0.5)
+	p.add_argument('--affi_weight', type=float, default=-1.0)
 	p.add_argument('--patience', type=int, default=70)
 	p.add_argument('--num_workers', type=int, default=10)
 	p.add_argument('--model_path', type=str, default="debug.pth")
