@@ -489,30 +489,45 @@ class GatedGCN(nn.Module):
 # ==============================================
 class BioLLMScore(nn.Module):
     def __init__(self, ligand_model, target_model, in_channels, hidden_dim, n_gaussians, dropout_rate=0.15,
-                 dist_threhold=1000):
+                 dist_threhold=1000, use_protein_lm=True, use_ligand_lm=True, use_gnn=True):
         super(BioLLMScore, self).__init__()
+        if not use_gnn and (not use_protein_lm or not use_ligand_lm):
+            raise ValueError("LM-only BioLMScore requires both protein and ligand language models")
+        if use_gnn and (ligand_model is None or target_model is None):
+            raise ValueError("ligand_model and target_model are required when use_gnn=True")
+
+        self.use_protein_lm = use_protein_lm
+        self.use_ligand_lm = use_ligand_lm
+        self.use_gnn = use_gnn
+        self.in_channels = in_channels
         self.ligand_model = ligand_model
         self.target_model = target_model
 
         # self.chemformer_norm_lig = nn.LayerNorm(1024)
         # self.esmc_norm_target = nn.LayerNorm(1152)
 
-        self.prot_proj = nn.Sequential(
-            nn.LayerNorm(1152),
-            nn.Linear(1152, 512),
-            nn.ELU(),
-            nn.Dropout(p=dropout_rate),
-            nn.Linear(512, in_channels),
-        )
+        if self.use_protein_lm:
+            self.prot_proj = nn.Sequential(
+                nn.LayerNorm(1152),
+                nn.Linear(1152, 512),
+                nn.ELU(),
+                nn.Dropout(p=dropout_rate),
+                nn.Linear(512, in_channels),
+            )
+        else:
+            self.prot_proj = None
 
         # embeddings from combined model
-        self.lig_proj = nn.Sequential(
-            nn.LayerNorm(1024),
-            nn.Linear(1024, 512),
-            nn.ELU(),
-            nn.Dropout(p=dropout_rate),
-            nn.Linear(512, in_channels),
-        )
+        if self.use_ligand_lm:
+            self.lig_proj = nn.Sequential(
+                nn.LayerNorm(1024),
+                nn.Linear(1024, 512),
+                nn.ELU(),
+                nn.Dropout(p=dropout_rate),
+                nn.Linear(512, in_channels),
+            )
+        else:
+            self.lig_proj = None
 
         # self.prot_proj = nn.Sequential(
         #     nn.LayerNorm(1152),
@@ -548,16 +563,20 @@ class BioLLMScore(nn.Module):
         #     nn.Linear(1024, 128)
         # )
 
-        self.target_fuse = nn.Sequential(nn.Linear(in_channels * 2, in_channels),
-        						nn.BatchNorm1d(in_channels),
-        						nn.ELU(),
-        						nn.Dropout(p=dropout_rate)
-        						 )
-        self.ligand_fuse = nn.Sequential(nn.Linear(in_channels * 2, in_channels),
-        						nn.BatchNorm1d(in_channels),
-        						nn.ELU(),
-        						nn.Dropout(p=dropout_rate)
-        						 )
+        if self.use_gnn and self.use_protein_lm:
+            self.target_fuse = nn.Sequential(nn.Linear(in_channels * 2, in_channels),
+                                            nn.BatchNorm1d(in_channels),
+                                            nn.ELU(),
+                                            nn.Dropout(p=dropout_rate))
+        else:
+            self.target_fuse = None
+        if self.use_gnn and self.use_ligand_lm:
+            self.ligand_fuse = nn.Sequential(nn.Linear(in_channels * 2, in_channels),
+                                            nn.BatchNorm1d(in_channels),
+                                            nn.ELU(),
+                                            nn.Dropout(p=dropout_rate))
+        else:
+            self.ligand_fuse = None
         self.MLP = nn.Sequential(nn.Linear(in_channels * 2, hidden_dim),
                                  nn.BatchNorm1d(hidden_dim),
                                  nn.ELU(),
@@ -582,37 +601,57 @@ class BioLLMScore(nn.Module):
         self.dist_threhold = dist_threhold
 
     def forward(self, data_ligand, data_target, protein_embs, ligand_embs):
-        h_l = self.ligand_model(data_ligand)
-        h_t = self.target_model(data_target)
+        if self.use_gnn:
+            h_l = self.ligand_model(data_ligand)
+            h_t = self.target_model(data_target)
+            h_l_x, l_mask = to_dense_batch(h_l.x, h_l.batch, fill_value=0)
+            h_t_x, t_mask = to_dense_batch(h_t.x, h_t.batch, fill_value=0)
+            ligand_edge_index = h_l.edge_index
+        else:
+            h_l = None
+            h_t = None
+            _, l_mask = to_dense_batch(data_ligand.x, data_ligand.batch, fill_value=0)
+            _, t_mask = to_dense_batch(data_target.x, data_target.batch, fill_value=0)
+            h_l_x = None
+            h_t_x = None
+            ligand_edge_index = data_ligand.edge_index
 
-        h_l_x, l_mask = to_dense_batch(h_l.x, h_l.batch, fill_value=0)
-        h_t_x, t_mask = to_dense_batch(h_t.x, h_t.batch, fill_value=0)
-
-        h_l_pos, _ = to_dense_batch(h_l.pos, h_l.batch, fill_value=0)
-        h_t_pos, _ = to_dense_batch(h_t.pos, h_t.batch, fill_value=0)
+        h_l_pos, _ = to_dense_batch(data_ligand.pos, data_ligand.batch, fill_value=0)
+        h_t_pos, _ = to_dense_batch(data_target.pos, data_target.batch, fill_value=0)
 
         # assert h_l_x.size(0) == h_t_x.size(0), 'Encountered unequal batch-sizes'
-        (B, N_l, C_out), N_t = h_l_x.size(), h_t_x.size(1)
+        B, N_l = l_mask.size()
+        N_t = t_mask.size(1)
+        C_out = self.in_channels
         self.B = B
         self.N_l = N_l
         self.N_t = N_t
 
-        protein_embs = self.prot_proj(protein_embs)
-        ligand_embs = self.lig_proj(ligand_embs)
+        if self.use_protein_lm:
+            protein_embs = self.prot_proj(protein_embs)
+            if protein_embs.shape[:2] != (B, N_t):
+                raise ValueError(
+                    f"protein embedding shape {tuple(protein_embs.shape[:2])} does not match graph shape {(B, N_t)}"
+                )
+            if self.use_gnn:
+                h_t_x = th.cat((h_t_x, protein_embs), dim=-1).view(B * N_t, -1)
+                h_t_x = self.target_fuse(h_t_x).view(B, N_t, C_out)
+            else:
+                h_t_x = protein_embs
 
-        # multimodel feature fusion
-        h_t_x = th.cat((h_t_x, protein_embs),dim=-1)
-        h_t_x = h_t_x.view(B*N_t, -1)
-        h_t_x = self.target_fuse(h_t_x)
-        h_t_x = h_t_x.view(B, N_t, C_out)
+        if self.use_ligand_lm:
+            ligand_embs = self.lig_proj(ligand_embs)
+            if ligand_embs.shape[:2] != (B, N_l):
+                raise ValueError(
+                    f"ligand embedding shape {tuple(ligand_embs.shape[:2])} does not match graph shape {(B, N_l)}"
+                )
+            if self.use_gnn:
+                h_l_x = th.cat((h_l_x, ligand_embs), dim=-1).view(B * N_l, -1)
+                h_l_x = self.ligand_fuse(h_l_x).view(B, N_l, C_out)
+            else:
+                h_l_x = ligand_embs
 
-        assert h_l_x.shape[1] == ligand_embs.shape[1]
-        assert h_t_x.shape[1] == protein_embs.shape[1]
-
-        h_l_x = th.cat((h_l_x, ligand_embs), dim=-1)
-        h_l_x = h_l_x.view(B*N_l, -1)
-        h_l_x = self.ligand_fuse(h_l_x)
-        h_l_x = h_l_x.view(B, N_l, C_out)
+        ligand_node_features = h_l.x if self.use_gnn else h_l_x[l_mask]
 
         # Combine and mask
         h_l_x = h_l_x.unsqueeze(-2)
@@ -637,8 +676,11 @@ class BioLLMScore(nn.Module):
         # mu = F.softplus(self.z_mu(C))
         # sigma = F.softplus(self.z_sigma(C)) + 1e-2  # 更平滑且数值安全
 
-        atom_types = self.atom_types(h_l.x)
-        bond_types = self.bond_types(th.cat([h_l.x[h_l.edge_index[0]], h_l.x[h_l.edge_index[1]]], axis=1))
+        atom_types = self.atom_types(ligand_node_features)
+        bond_types = self.bond_types(th.cat([
+            ligand_node_features[ligand_edge_index[0]],
+            ligand_node_features[ligand_edge_index[1]],
+        ], axis=1))
 
 
         dist = self.compute_euclidean_distances_matrix(h_l_pos, h_t_pos.view(B, -1, 3))[C_mask]
@@ -654,9 +696,6 @@ class BioLLMScore(nn.Module):
                                                                                                    axis=-1).unsqueeze(
             -1)
         return th.nan_to_num((dists ** 0.5).view(self.B, self.N_l, -1, 24), 10000).min(axis=-1)[0]
-
-
-
 
 
 

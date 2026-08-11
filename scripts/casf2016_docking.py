@@ -22,7 +22,8 @@ torch.multiprocessing.set_sharing_strategy('file_system')
 def parse_args():
 	parser = argparse.ArgumentParser(description='Model training parameters')
 
-	parser.add_argument('--encoder', type=str, default='gt')
+	parser.add_argument('--encoder', type=str, choices=['gt', 'gatedgcn'], default='gatedgcn')
+	parser.add_argument('--model_type', type=str, choices=['biolm', 'genscore'], default='biolm')
 	parser.add_argument('--model_path', type=str, default="/data1/***/codes/RTMScore-main/scripts/xxx.pth",
 						help='Path to the model')
 	parser.add_argument('--outprefix', type=str, default="rtmscore2", help='Output prefix')
@@ -37,13 +38,14 @@ args['device'] = 'cuda' if th.cuda.is_available() else 'cpu'
 args['seeds'] = 126
 args["num_workers"] = 0
 args["model_path"] = args1.model_path
+args["model_type"] = args1.model_type
 args["cutoff"] = 10
 args["encoder"] = args1.encoder
 args["num_node_featsp"] = 41
 args["num_node_featsl"] = 41
 args["num_edge_featsp"] = 5
 args["num_edge_featsl"] = 10
-args["hidden_dim0"] = 256
+args["hidden_dim0"] = 128
 args["hidden_dim"] = 128
 args["n_gaussians"] = 10
 args["dropout_rate"] = 0.15
@@ -128,12 +130,16 @@ def scoring(prot, lig, protein_emb,ligand_emb, modpath,
 	else:
 		raise ValueError("encoder should be \"gt\" or \"gatedgcn\"!")
 						
+	is_genscore = kwargs["model_type"] == "genscore"
 	model = BioLLMScore(ligmodel, protmodel,
 					in_channels=kwargs["hidden_dim0"], 
 					hidden_dim=kwargs["hidden_dim"], 
 					n_gaussians=kwargs["n_gaussians"], 
 					dropout_rate=kwargs["dropout_rate"], 
-					dist_threhold=kwargs["dist_threhold"]).to(kwargs['device'])
+					dist_threhold=kwargs["dist_threhold"],
+					use_protein_lm=not is_genscore,
+					use_ligand_lm=not is_genscore,
+					use_gnn=True).to(kwargs['device'])
 	
 	checkpoint = th.load(modpath, map_location=th.device(kwargs['device']))
 	model.load_state_dict(checkpoint['model_state_dict']) 

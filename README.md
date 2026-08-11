@@ -70,30 +70,14 @@ BioLM-Score/
 
 ## Installation
 
-There is no single root-level environment file for the whole project, so the safest approach is to create a fresh environment and install dependencies step by step.
-
-### 1. Create an environment
-
-`chemformer/pyproject.toml` pins `python = 3.7.11` and `torch = 1.8.1`, so that is a reasonable starting point if you want to stay close to the original setup.
+Create the tested Conda environment from the root-level environment file:
 
 ```bash
-conda create -n biolm-score python=3.7.11 -y
-conda activate biolm-score
+conda env create -f environment.yml
+conda activate biolm
 ```
 
-### 2. Install core dependencies
-
-The exact wheel combination for `torch-geometric`, `torch-scatter`, and `dgl` depends on your PyTorch and CUDA versions. Install matching builds for your environment.
-
-```bash
-pip install numpy pandas scipy scikit-learn joblib tqdm tensorboard matplotlib
-pip install mdanalysis prody rdkit-pypi meeko vina
-pip install torch-geometric torch-scatter dgl
-```
-
-If you rely on Open Babel-based pocket preprocessing, make sure Open Babel is available in your environment as well.
-
-### 3. Install local Chemformer code
+Install the bundled Chemformer code when regenerating ligand embeddings:
 
 ```bash
 pip install -e ./chemformer
@@ -138,6 +122,16 @@ ligand_embeddings/
 - Protein embedding filenames are matched by `pdbid.npy`
 - Ligand embedding filenames are also matched by `pdbid.npy`
 - Variable-length residue and atom embeddings are padded during batching
+
+ESM-C and Chemformer are fixed offline feature extractors and are not included in the scorer training graph. Their per-complex `float32` NumPy arrays are precomputed on disk and loaded into host memory by the dataset. The 1,152-dimensional protein and 1,024-dimensional ligand embeddings are projected through `1152 -> 512 -> 128` and `1024 -> 512 -> 128` networks, respectively.
+
+### Time-split IDs
+
+The exact time-split files used in the reported experiments are provided in [`BioLM_Score/data`](./BioLM_Score/data):
+
+- [`train_ids.txt`](./BioLM_Score/data/train_ids.txt): 16,014 complexes
+- [`val_ids.txt`](./BioLM_Score/data/val_ids.txt): 942 complexes
+- [`casf_excluded_ids.txt`](./BioLM_Score/data/casf_excluded_ids.txt): 285 CASF-2016 complexes excluded from model selection
 
 ### Build protein and ligand graphs
 
@@ -218,23 +212,41 @@ The final training objective combines:
 
 The implementation lives in [BioLM_Score/model/utils2.py](./BioLM_Score/model/utils2.py).
 
+## Pretrained checkpoints
+
+The BioLM-Score and reproduced GenScore checkpoints are available from [Zenodo](https://doi.org/10.5281/zenodo.21878818). Files beginning with `mm` are BioLM-Score checkpoints; files without that prefix are GenScore checkpoints. `gatedgcn_1.0_01.pth`, for example, is the first joint-trained GenScore GatedGCN checkpoint with affinity weight alpha = 1, while `mmgatedgcn_1.0_01.pth` is its BioLM-Score counterpart.
+
 ## Evaluation
+
+Use `--model_type biolm` for `mm*` checkpoints and `--model_type genscore` for the corresponding reproduced GenScore checkpoints. No checkpoint conversion is required.
 
 ### CASF-2016 scoring and ranking
 
 ```bash
 python scripts/casf2016_scoring_ranking.py \
-  --model_path /path/to/model.pth \
-  --encoder gt \
+  --model_path /path/to/mmgatedgcn_1.0_01.pth \
+  --model_type biolm \
+  --encoder gatedgcn \
   --outprefix biolm_score
+```
+
+For the reproduced GenScore checkpoint:
+
+```bash
+python scripts/casf2016_scoring_ranking.py \
+  --model_path /path/to/gatedgcn_1.0_01.pth \
+  --model_type genscore \
+  --encoder gatedgcn \
+  --outprefix genscore
 ```
 
 ### CASF-2016 screening
 
 ```bash
 python scripts/casf2016_screening.py \
-  --model_path /path/to/model.pth \
-  --encoder gt \
+  --model_path /path/to/mmgatedgcn_1.0_01.pth \
+  --model_type biolm \
+  --encoder gatedgcn \
   --outprefix biolm_score
 ```
 
@@ -242,7 +254,8 @@ python scripts/casf2016_screening.py \
 
 ```bash
 python scripts/casf2016_docking.py \
-  --model_path /path/to/model.pth \
-  --encoder gt \
+  --model_path /path/to/mmgatedgcn_1.0_01.pth \
+  --model_type biolm \
+  --encoder gatedgcn \
   --outprefix biolm_score
 ```
