@@ -32,7 +32,7 @@ if __name__ == '__main__':
 	p.add_argument('--patience', type=int, default=70)
 	p.add_argument('--num_workers', type=int, default=10)
 	p.add_argument('--model_path', type=str, default="debug.pth")
-	p.add_argument('--encoder', type=str, choices=['gt', 'gatedgcn'], default="gt")
+	p.add_argument('--encoder', type=str, choices=['gt', 'gatedgcn'], default="gatedgcn")
 	p.add_argument('--mode', type=str, choices=['lower', 'higher'], default="lower")
 	p.add_argument('--finetune', action="store_true", default=False)
 	p.add_argument('--original_model_path', type=str, default=None)
