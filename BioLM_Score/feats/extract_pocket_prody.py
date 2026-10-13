@@ -2,7 +2,8 @@ import os, re
 import prody as pr
 from openbabel import openbabel as ob
 #import subprocess
-os.environ["BABEL_LIBDIR"] = "/data1/×××/anaconda3/bin/obabel"
+# OpenBabel should use the installation configured in the user's environment.
+# Set BABEL_LIBDIR externally only if the local installation needs a custom library path.
 
 def write_file(output_file, outline):
 	buffer = open(output_file, 'w')

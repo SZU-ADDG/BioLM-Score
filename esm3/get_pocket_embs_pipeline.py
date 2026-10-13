@@ -1,5 +1,8 @@
 
 import os
+import argparse
+import sys
+from pathlib import Path
 
 import MDAnalysis as mda
 
@@ -9,9 +12,10 @@ from rdkit import Chem
 
 from esm.models.esmc import ESMC
 from esm.sdk.api import ESMProtein, LogitsConfig
-from ..BioLM_Score.extract_pocket_prody import extract_pocket
+REPO_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO_ROOT))
+from BioLM_Score.feats.extract_pocket_prody import extract_pocket
 
-client = ESMC.from_pretrained("esmc_600m").to("cuda")  # 或者使用 "cpu"
 
 
 
@@ -58,7 +62,7 @@ def pdb_to_sequence(prot):
     return ''.join(s)
 
 
-def get_embeddings_from_sequence(sequence, pdbid, failed_pdbids_file='get_embedding_failed_pdbbind.txt'):
+def get_embeddings_from_sequence(sequence, pdbid, client, failed_pdbids_file):
     try:
         # 创建ESMProtein对象
         protein = ESMProtein(sequence=sequence)
@@ -134,23 +138,38 @@ def get_kept_indices(full_pdb_path, pocket_pdb_path):
         pocket_residues), f'{full_pdb_path}:口袋序列特征长度出错！len(kept_indices):{len(kept_indices)},len(pocket_residues):{len(pocket_residues)}'
     return kept_indices
 
-root_dir = "/data1/***/codes/GenScore-main/data/posebusters_benchmark_set/"
-out_path = "/data1/***/codes/GenScore-main/data/posebusters_embs/pocket_embs/"
+def main():
+    parser = argparse.ArgumentParser(description="Generate ESM-C pocket embeddings for prepared protein-ligand folders.")
+    parser.add_argument("--input-root", type=Path, required=True,
+                        help="Directory containing one prepared complex per subdirectory")
+    parser.add_argument("--output-dir", type=Path, required=True)
+    parser.add_argument("--model-name", default="esmc_600m")
+    parser.add_argument("--device", default="cuda")
+    parser.add_argument("--failed-log", type=Path, default=Path("get_embedding_failed.txt"))
+    args = parser.parse_args()
+    args.output_dir.mkdir(parents=True, exist_ok=True)
+    args.failed_log.parent.mkdir(parents=True, exist_ok=True)
+    client = ESMC.from_pretrained(args.model_name, device=args.device).to(args.device)
 
-for subdir in os.listdir(root_dir):
-    subdir_path = os.path.join(root_dir, subdir)
-    if os.path.isdir(subdir_path):
-        target_pdb = os.path.join(subdir_path, f"{subdir}_protein.pdb")
-        if os.path.isfile(target_pdb):
-            seq = pdb_to_sequence(target_pdb)
-        ligand_path = os.path.join(subdir_path, f"{subdir}_ligand.sdf")
-        # extract_pocket(target_pdb,ligand_path,10,subdir,subdir, os.path.join(subdir_path, f"{subdir}_prot"))
-        protein_embs= get_embeddings_from_sequence(seq, subdir)
-        pocket_pdb_path = os.path.join(subdir_path, f"{subdir}_pocket_chain_10A.pdb")
-        kept_indices = get_kept_indices(target_pdb, pocket_pdb_path)
+    for subdir in os.listdir(args.input_root):
+        subdir_path = args.input_root / subdir
+        if not subdir_path.is_dir():
+            continue
+        target_pdb = subdir_path / f"{subdir}_protein.pdb"
+        if not target_pdb.is_file():
+            print(f"Missing protein file: {target_pdb}")
+            continue
+        seq = pdb_to_sequence(str(target_pdb))
+        protein_embs = get_embeddings_from_sequence(seq, subdir, client, str(args.failed_log))
+        if protein_embs is None:
+            continue
+        pocket_pdb_path = subdir_path / f"{subdir}_pocket_chain_10A.pdb"
+        kept_indices = get_kept_indices(str(target_pdb), str(pocket_pdb_path))
         pocket_embs = protein_embs[kept_indices]
-        pocket_embs_path = os.path.join(out_path, f"{subdir}_pocket.npy")
+        np.save(args.output_dir / f"{subdir}_pocket.npy", pocket_embs.cpu().numpy())
 
-        np.save(pocket_embs_path, pocket_embs.cpu().numpy())
+
+if __name__ == "__main__":
+    main()
 
 

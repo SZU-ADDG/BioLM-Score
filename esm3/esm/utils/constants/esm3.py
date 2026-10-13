@@ -106,7 +106,7 @@ def data_root(model: str):
     elif model.startswith("esmc-300"):
         path = Path(snapshot_download(repo_id="EvolutionaryScale/esmc-300m-2024-12"))
     elif model.startswith("esmc-600"):
-        path = Path("/data1/chenby/codes/esm-main/")
+        path = Path(os.environ.get("ESM_DATA_ROOT", Path.home() / ".cache" / "esm"))
     else:
         raise ValueError(f"{model=} is an invalid model name.")
     return path

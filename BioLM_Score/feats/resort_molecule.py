@@ -1,6 +1,8 @@
 import pandas as pd
 from rdkit import Chem
 import os
+import argparse
+from pathlib import Path
 
 
 def resort_mol(dataset_path, output_csv="resorted_mol_info.csv"):
@@ -51,6 +53,11 @@ def resort_mol(dataset_path, output_csv="resorted_mol_info.csv"):
     print(f"已保存信息至: {output_csv}")
 
 
-dataset_path = '/data1/***/codes/RTMScore-main/data/CASF-2016/coreset/'
-
-resort_mol(dataset_path=dataset_path, output_csv='/data1/***/codes/Chemformer-main/data/casf_canonical_smiles.csv')
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Canonicalize ligand atom order for Chemformer features.")
+    parser.add_argument("--dataset-path", type=Path, required=True,
+                        help="Directory containing ligand MOL2 files")
+    parser.add_argument("--output-csv", type=Path, required=True)
+    args = parser.parse_args()
+    args.output_csv.parent.mkdir(parents=True, exist_ok=True)
+    resort_mol(dataset_path=str(args.dataset_path), output_csv=str(args.output_csv))

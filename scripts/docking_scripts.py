@@ -8,6 +8,8 @@ import glob
 import os
 
 from vina import Vina
+from pathlib import Path
+import argparse
 
 os.environ["OMP_NUM_THREADS"] = "1"
 os.environ["MKL_NUM_THREADS"] = "1"
@@ -32,7 +34,8 @@ np.random.seed(123)
 th.cuda.manual_seed_all(123)
 th.manual_seed(123)
 import sys
-sys.path.append("/data1/***/codes/GenScore-main")
+REPO_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO_ROOT))
 from torch.utils.data import DataLoader
 from BioLM_Score.data.data2 import VSDataset
 from BioLM_Score.model.utils2 import run_an_eval_epoch, collate_fn
@@ -46,10 +49,21 @@ from docking_utils import get_score_model, optimize_conformation, compute_euclid
 import pandas as pd
 from BioLM_Score.feats.mol2graph_rdmda_res import label_query
 from docking_utils import get_score_model
-device = 'cuda'
-score_model = get_score_model(modelpath='/data1/***/codes/GenScore-main/scripts/mmgatedgcn_ft_1.0_04.pth')
-affinity_csv = "/data1/***/codes/GenScore-main/data/train_data/pdbbind_affinity.csv"
-affinity_pd = pd.read_csv(affinity_csv, index_col=0, header=0)
+parser = argparse.ArgumentParser(description="Experimental Vina pose-refinement analysis for CASF-2016.")
+parser.add_argument("--model-path", type=Path, required=True)
+parser.add_argument("--affinity-csv", type=Path, required=True)
+parser.add_argument("--casf-root", type=Path, required=True,
+                    help="CASF-2016 directory containing coreset/")
+parser.add_argument("--protein-embeddings-dir", type=Path, required=True)
+parser.add_argument("--ligand-embeddings-dir", type=Path, required=True)
+parser.add_argument("--output-dir", type=Path, required=True)
+parser.add_argument("--target", default="1pxn", help="PDB ID, or 'all' to process all coreset targets")
+parser.add_argument("--device", default="cuda" if th.cuda.is_available() else "cpu")
+args = parser.parse_args()
+
+device = args.device
+score_model = get_score_model(modelpath=str(args.model_path), device=device)
+affinity_pd = pd.read_csv(args.affinity_csv, index_col=0, header=0)
 
 
 def vina_refine_pose_from_pdbqt_string(
@@ -94,7 +108,7 @@ def pdbqt_to_pdb_with_obabel(pdbqt_path: str, sdf_path: str, add_h: bool=False, 
     pdbqt_path = str(Path(pdbqt_path).resolve())
     sdf_path = str(Path(sdf_path).resolve())
 
-    cmd = ["/data1/***/anaconda3/envs/rtmscore/bin/obabel", "-ipdbqt", pdbqt_path, "-osdf", "-O", sdf_path]
+    cmd = [os.getenv("OBABEL_EXE", "obabel"), "-ipdbqt", pdbqt_path, "-osdf", "-O", sdf_path]
 
     if add_h and del_h:
         raise ValueError("add_h and del_h cannot both be True.")
@@ -183,30 +197,29 @@ def dock_compound(data, pdbid, ligand_path, protein_pdbqt, out_path, dist_thresh
     result['rotbonds'] = opt.rotable_bonds
     #result['num_MixOfGauss'] = mu.size(0)
 
-    # opt_mol = Chem.RemoveHs(opt_mol)
-    # writer = Chem.SDWriter("/data1/***/codes/GenScore-main/docking_out/docking_out_0106/%s.sdf" % (pdbid))
-    # writer.write(opt_mol)
-    # writer.close()
-
     return result
 
 
 
-pdbids = [x for x in os.listdir("/data1/***/codes/RTMScore-main/data/CASF-2016/coreset") if os.path.isdir("/data1/***/codes/RTMScore-main/data/CASF-2016/coreset/%s"%(x))]
+casf_coreset = args.casf_root / "coreset"
+pdbids = [path.name for path in casf_coreset.iterdir() if path.is_dir()]
+if args.target.lower() != "all":
+    pdbids = [pdbid for pdbid in pdbids if pdbid == args.target]
+if not pdbids:
+    raise SystemExit(f"No CASF target matched {args.target!r} under {casf_coreset}")
+args.output_dir.mkdir(parents=True, exist_ok=True)
 results = []
 for pdbid in tqdm(pdbids):
-    if pdbid != '1pxn':
-        continue
-    pocket_path = "/data1/***/codes/RTMScore-main/data/CASF-2016/coreset/%s/%s_pocket_chain_10A.pdb"%(pdbid, pdbid)
-    ligand_path = "/data1/***/codes/RTMScore-main/data/CASF-2016/coreset/%s/%s_ligand_sort.sdf"%(pdbid, pdbid)
-    pocket_emb = "/data1/***/codes/esm-main/data/protein_embeddings/casf_embeddings/pocket_embeddings/%s.npy"%(pdbid)
-    ligand_emb = "/data1/***/codes/Chemformer-main/data/ligand_embeddings3/casf2016/%s.npy"%(pdbid)
-    protein_pdbqt = f"/data1/***/codes/RTMScore-main/data/CASF-2016/coreset/{pdbid}/{pdbid}_protein.pdbqt"
-    out_path = "/data1/***/codes/GenScore-main/docking_out/para_analysis/iter800"
-    data = VSDataset(ligs=ligand_path,
-					prot=pocket_path,
-					 protein_emb=pocket_emb,
-					 ligand_emb=ligand_emb,
+    pocket_path = casf_coreset / pdbid / f"{pdbid}_pocket_chain_10A.pdb"
+    ligand_path = casf_coreset / pdbid / f"{pdbid}_ligand_sort.sdf"
+    pocket_emb = args.protein_embeddings_dir / f"{pdbid}.npy"
+    ligand_emb = args.ligand_embeddings_dir / f"{pdbid}.npy"
+    protein_pdbqt = casf_coreset / pdbid / f"{pdbid}_protein.pdbqt"
+    out_path = str(args.output_dir)
+    data = VSDataset(ligs=str(ligand_path),
+					prot=str(pocket_path),
+					 protein_emb=str(pocket_emb),
+					 ligand_emb=str(ligand_emb),
 					cutoff=10,
 					explicit_H=False,
 					use_chirality=True,
@@ -217,9 +230,9 @@ for pdbid in tqdm(pdbids):
         d = {}
         for k in results[0].keys():
             if k != 'jac':
-                d[k] = tuple(d[k] for d in results)
+                d[k] = tuple(record[k] for record in results)
         # th.save(d, 'DockingResults_CASF2016_CoreSet.chk')
         results_df = pd.DataFrame.from_dict(d)
-        results_df.to_csv(out_path + 'DockingResults_CASF2016_CoreSet.csv', index=False)
+        results_df.to_csv(args.output_dir / 'DockingResults_CASF2016_CoreSet.csv', index=False)
     except:
         print("%s error!"%pdbid)

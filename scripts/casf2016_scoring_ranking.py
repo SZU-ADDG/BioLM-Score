@@ -5,11 +5,13 @@ import torch as th
 from joblib import Parallel, delayed
 import pandas as pd
 import os, sys
+from pathlib import Path
 import pickle
 from scipy.stats import pearsonr
 from sklearn import linear_model
 from sklearn.metrics import mean_squared_error
-sys.path.append("/data1/***/codes/GenScore-main")
+REPO_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO_ROOT))
 # from torch_geometric.loader import DataLoader
 from torch.utils.data import DataLoader
 from BioLM_Score.data.data2 import PDBbindDataset
@@ -22,9 +24,17 @@ def parse_args():
 
 	parser.add_argument('--encoder', type=str, choices=['gt', 'gatedgcn'], default='gatedgcn')
 	parser.add_argument('--model_type', type=str, choices=['biolm', 'genscore'], default='biolm')
-	parser.add_argument('--model_path', type=str, default="/data1/***/codes/RTMScore-main/scripts/xxx.pth",
-						help='Path to the model')
+	parser.add_argument('--model_path', type=str, required=True, help='Path to the model checkpoint')
 	parser.add_argument('--outprefix', type=str, default="rtmscore2", help='Output prefix')
+	parser.add_argument('--data-dir', type=Path, required=True,
+						help='Directory containing prepared CASF ids/prot/lig files')
+	parser.add_argument('--test-prefix', default='v2020_casf')
+	parser.add_argument('--protein-embeddings-dir', type=Path, required=True)
+	parser.add_argument('--ligand-embeddings-dir', type=Path, required=True)
+	parser.add_argument('--core-set-file', type=Path, required=True,
+						help='CASF CoreSet.dat used for scoring/ranking labels')
+	parser.add_argument('--output-dir', type=Path, required=True)
+	parser.add_argument('--num-workers', type=int, default=10)
 
 	return parser.parse_args()
 
@@ -36,11 +46,13 @@ args["batch_size"] = 128
 args["dist_threhold"] = 5.
 args['device'] = 'cuda' if th.cuda.is_available() else 'cpu'
 args['seeds'] = 126
-args["num_workers"] = 10
+args["num_workers"] = args1.num_workers
 args["model_path"] = args1.model_path
 args["model_type"] = args1.model_type
-args["data_dir"] = "/data1/***/codes/GenScore-main/data/train_data3"
-args["test_prefix"] = "v2020_casf"
+args["data_dir"] = str(args1.data_dir)
+args["test_prefix"] = args1.test_prefix
+args["protein_embeddings_dir"] = str(args1.protein_embeddings_dir)
+args["ligand_embeddings_dir"] = str(args1.ligand_embeddings_dir)
 args["cutoff"] = 10.0
 args["encoder"] = args1.encoder
 args["num_node_featsp"] = 41
@@ -52,6 +64,7 @@ args["hidden_dim"] = 128
 args["n_gaussians"] = 10
 args["dropout_rate"] = 0.15
 args["outprefix"] = args1.outprefix
+args["num_workers"] = args1.num_workers
 
 
 def scoring(ids, prots, ligs, modpath,
@@ -75,8 +88,8 @@ def scoring(ids, prots, ligs, modpath,
 	"""
 	#try:
 	data = PDBbindDataset(ids=ids,prots=prots,ligs=ligs,
-						  protein_embs='/data1/***/codes/esm-main/data/protein_embeddings/pdbbindv2020_embeddings/pocket_embeddings/',
-						  ligand_embs='/data1/***/codes/Chemformer-main/data/ligand_embeddings3/pdbbindv2020/')
+						  protein_embs=kwargs["protein_embeddings_dir"],
+						  ligand_embs=kwargs["ligand_embeddings_dir"])
 						
 	test_loader = DataLoader(dataset=data, 
 							batch_size=kwargs["batch_size"],
@@ -202,10 +215,11 @@ ids='%s/%s_ids.npy'%(args["data_dir"],args["test_prefix"])
 
 _, preds = scoring(ids, prots, ligs, args["model_path"], parallel=True, **args)
 
-df = pd.read_csv("/data1/***/codes/RTMScore-main/data/CASF-2016/power_scoring/CoreSet.dat", sep='[,,\t, ]+', header=0, engine='python')
+df = pd.read_csv(args1.core_set_file, sep='[,,\t, ]+', header=0, engine='python')
 df_score = pd.DataFrame(zip(np.load(ids)[0],preds), columns=["#code","score"])
 testdf = pd.merge(df,df_score,on='#code')
-testdf[["#code","score"]].to_csv("/data1/***/codes/RTMScore-main/data/CASF-2016/power_scoring/examples/2025-4-29/%s.dat"%args["outprefix"], index=False, sep="\t")
+args1.output_dir.mkdir(parents=True, exist_ok=True)
+testdf[["#code","score"]].to_csv(args1.output_dir / ("%s.dat" % args["outprefix"]), index=False, sep="\t")
 
 obtain_score_metrics(testdf)
 print('*********************************************')

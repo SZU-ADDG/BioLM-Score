@@ -1,0 +1,24 @@
+The code in this directory is derived from ESM (https://github.com/evolutionaryscale/esm),
+version 3.1.5, Copyright EvolutionaryScale PBC.
+
+The ESM source code at version 3.1.5 is licensed under the
+EvolutionaryScale Cambrian Open License Agreement.
+
+Full license text:
+https://www.evolutionaryscale.ai/policies/cambrian-open-license-agreement
+
+ESM-C 600M model weights (not included in this repository) are licensed
+separately under the Cambrian Non-Commercial License Agreement:
+https://www.evolutionaryscale.ai/policies/cambrian-non-commercial-license-agreement
+
+Users must obtain model weights independently and comply with the
+applicable license terms from the provider.
+
+---
+
+Some files in this directory contain code from other projects and retain
+their original copyright headers and Apache License 2.0 terms:
+
+- esm/layers/rotary.py — Copyright 2022 EleutherAI and HuggingFace Inc.
+- esm/utils/residue_constants.py — Copyright 2021 AlQuraishi Laboratory /
+  DeepMind Technologies Limited

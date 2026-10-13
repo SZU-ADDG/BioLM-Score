@@ -1,0 +1,10 @@
+{
+  "models": [
+    {"model": "BioLM-Score", "seed": 23, "checkpoint": "../../checkpoints/mmgatedgcn_1.0_01.pth"},
+    {"model": "BioLM-Score", "seed": 24, "checkpoint": "../../checkpoints/mmgatedgcn_1.0_02.pth"},
+    {"model": "BioLM-Score", "seed": 8, "checkpoint": "../../checkpoints/mmgatedgcn_1.0_03.pth"},
+    {"model": "GenScore", "seed": 23, "checkpoint": "../../checkpoints/gatedgcn_1.0_01.pth"},
+    {"model": "GenScore", "seed": 24, "checkpoint": "../../checkpoints/gatedgcn_1.0_02.pth"},
+    {"model": "GenScore", "seed": 8, "checkpoint": "../../checkpoints/gatedgcn_1.0_03.pth"}
+  ]
+}

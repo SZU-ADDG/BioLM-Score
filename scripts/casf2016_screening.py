@@ -1,15 +1,16 @@
 import argparse
 from multiprocessing import Pool, cpu_count
+from pathlib import Path
 
 import numpy as np
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "1,2,6,7,8,9"
 import torch as th
 from joblib import Parallel, delayed
 import pandas as pd
 import os, sys
 import pickle
-sys.path.append("/data1/***/codes/GenScore-main")
+REPO_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO_ROOT))
 # from torch_geometric.loader import DataLoader
 from torch.utils.data import DataLoader
 from BioLM_Score.data.data2 import VSDataset
@@ -23,9 +24,16 @@ def parse_args():
 
 	parser.add_argument('--encoder', type=str, choices=['gt', 'gatedgcn'], default='gatedgcn')
 	parser.add_argument('--model_type', type=str, choices=['biolm', 'genscore'], default='biolm')
-	parser.add_argument('--model_path', type=str, default="/data1/***/codes/RTMScore-main/scripts/xxx.pth",
-						help='Path to the model')
+	parser.add_argument('--model_path', type=str, required=True, help='Path to the model checkpoint')
 	parser.add_argument('--outprefix', type=str, default="rtmscore2", help='Output prefix')
+	parser.add_argument('--casf-root', type=Path, required=True,
+						help='CASF-2016 directory containing coreset/ and decoys_screening/')
+	parser.add_argument('--pdbbind-processed-root', type=Path, required=True,
+						help='Processed PDBbind complex directory, with one subdirectory per PDB ID')
+	parser.add_argument('--protein-embeddings-dir', type=Path, required=True)
+	parser.add_argument('--ligand-embeddings-dir', type=Path, required=True)
+	parser.add_argument('--output-dir', type=Path, required=True)
+	parser.add_argument('--num-workers', type=int, default=10)
 
 	return parser.parse_args()
 
@@ -36,7 +44,7 @@ args["dist_threhold"] = 5.
 args['device'] = 'cuda' if th.cuda.is_available() else 'cpu'
 # args['device'] = 'cpu'
 args['seeds'] = 126
-args["num_workers"] = 10
+args["num_workers"] = args1.num_workers
 args["model_path"] = args1.model_path
 args["model_type"] = args1.model_type
 args["cutoff"] = 10.0
@@ -50,6 +58,12 @@ args["hidden_dim"] = 128
 args["n_gaussians"] = 10
 args["dropout_rate"] = 0.15
 args["outprefix"] = args1.outprefix
+args["casf_root"] = args1.casf_root
+args["pdbbind_processed_root"] = args1.pdbbind_processed_root
+args["protein_embeddings_dir"] = args1.protein_embeddings_dir
+args["ligand_embeddings_dir"] = args1.ligand_embeddings_dir
+args["output_dir"] = args1.output_dir
+args["num_workers"] = args1.num_workers
 
 def scoring(prot, lig, protein_emb,ligand_emb, modpath,
 			cut=10.0,
@@ -151,10 +165,12 @@ def scoring(prot, lig, protein_emb,ligand_emb, modpath,
 
 
 def score_compound(pdbid, ligid, **args):
-	return scoring(prot="/data1/***/dataset/pdbbind/PDBbind_v2020_processed/%s/%s_pocket_chain_10A.pdb"%(pdbid, pdbid),
-					lig="/data1/***/codes/RTMScore-main/data/CASF-2016/decoys_screening/%s/%s_%s.sdf"%(pdbid, pdbid, ligid),
-				   protein_emb='/data1/***/codes/esm-main/data/protein_embeddings/pdbbindv2020_embeddings/pocket_embeddings/%s.npy' % pdbid,
-				   ligand_emb="/data1/***/codes/Chemformer-main/data/ligand_embeddings3/casf2016/%s.npy" % ligid,
+	casf_root = Path(args["casf_root"])
+	pdbbind_root = Path(args["pdbbind_processed_root"])
+	return scoring(prot=str(pdbbind_root / pdbid / f"{pdbid}_pocket_chain_10A.pdb"),
+					lig=str(casf_root / "decoys_screening" / pdbid / f"{pdbid}_{ligid}.sdf"),
+				   protein_emb=str(Path(args["protein_embeddings_dir"]) / f"{pdbid}.npy"),
+				   ligand_emb=str(Path(args["ligand_embeddings_dir"]) / f"{ligid}.npy"),
 					modpath=args["model_path"],
 					cut=args["cutoff"],
 					explicit_H=False, 
@@ -190,9 +206,11 @@ def score_wrapper(pdbid, ligids, args):
 
 
 
-ligids = [x for x in os.listdir("/data1/***/codes/RTMScore-main/data/CASF-2016/coreset") if os.path.isdir("/data1/***/codes/RTMScore-main/data/CASF-2016/coreset/%s"%(x))]
-pdbids = [x for x in os.listdir("/data1/***/codes/RTMScore-main/data/CASF-2016/decoys_screening") if os.path.isdir("/data1/***/codes/RTMScore-main/data/CASF-2016/decoys_screening/%s"%(x))]
-pdbids1 = [x for x in os.listdir("/data1/***/dataset/pdbbind/PDBBind/PDBBind_processed/") if os.path.isdir("/data1/***/dataset/pdbbind/PDBBind/PDBBind_processed/%s"%(x))]
+casf_root = Path(args["casf_root"])
+pdbbind_root = Path(args["pdbbind_processed_root"])
+ligids = [p.name for p in (casf_root / "coreset").iterdir() if p.is_dir()]
+pdbids = [p.name for p in (casf_root / "decoys_screening").iterdir() if p.is_dir()]
+pdbids1 = [p.name for p in pdbbind_root.iterdir() if p.is_dir()]
 ids = [pdbid for pdbid in pdbids if pdbid in pdbids1]
 task_args = [(pdbid, ligids, args) for pdbid in ids]
 if args['device'] == 'cpu':
@@ -204,17 +222,17 @@ else:
 		results.append(score_compound2(pdbid, ligids,**args))
 results[:] = [result for result in results if result[0] is not None]
 
-outdir = "/data1/***/codes/RTMScore-main/data/CASF-2016/power_screening/examples/2025-4-29/%s"%args["outprefix"]
-os.system("mkdir -p %s"%outdir)
+outdir = Path(args["output_dir"]) / args["outprefix"]
+outdir.mkdir(parents=True, exist_ok=True)
 for res in results:
 	#pdbid = res[0][0].split("_")[0]
 	pdbid = res[0]
 	df = pd.DataFrame(zip(*res[1]),columns=["#code_ligand_num","score"])
 	df["#code_ligand_num"] = df["#code_ligand_num"].str.split("-").apply(lambda x : x[0])
 	# print(df)
-	df.to_csv("%s/%s_score.dat"%(outdir, pdbid), index=False, sep="\t")
+	df.to_csv(outdir / f"{pdbid}_score.dat", index=False, sep="\t")
 
-with open("%s_screening.pkl"%args["outprefix"],"wb") as dbFile:
+with open(Path(args["output_dir"]) / f"{args['outprefix']}_screening.pkl","wb") as dbFile:
 	pickle.dump(results,dbFile)
 
 

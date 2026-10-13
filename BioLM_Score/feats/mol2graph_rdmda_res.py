@@ -12,6 +12,7 @@ import MDAnalysis as mda
 from MDAnalysis.analysis import dihedrals
 from MDAnalysis.analysis import distances
 import warnings
+from pathlib import Path
 warnings.filterwarnings("ignore", category=UserWarning, module="MDAnalysis")
 
 
@@ -410,8 +411,10 @@ def UserInput():
                         help='the cutoff to determine the pocket')
     p.add_argument('-o', '--outprefix', default="out",
                         help='The output bin file.')
-    p.add_argument('-r', '--ref', default="/data1/chenby/codes/GenScore-main/data/train_data/pdbbind_affinity.csv",
+    p.add_argument('-r', '--ref', required=True,
                         help='The reference file to query the label of the complex.')
+    p.add_argument('--filter-ids', default=str(Path(__file__).resolve().parents[1] / 'data' / 'casf_excluded_ids.txt'),
+                   help='Optional text/NumPy ID list restricting graph generation; defaults to the committed CASF-2016 IDs.')
     p.add_argument('-usH', '--useH', default=False, action="store_true",
                         help='whether to use the explicit H atoms.')
     p.add_argument('-uschi', '--use_chirality', default=False, action="store_true",
@@ -427,12 +430,20 @@ def UserInput():
 
 def main():
     args = UserInput()
-    # casf_ids_path = '/data1/***/codes/GenScore-main/data/train_data/v2020_casf_ids.csv'
-    # casf_ids = pd.read_csv(casf_ids_path, header=None, dtype=str)[0].tolist()
-    casf_pdbids = np.load('/data1/***/codes/GenScore-main/data/rtmscore_s/v2020_casf_ids.npy')[0]
+    if args.filter_ids:
+        filter_path = Path(args.filter_ids)
+        if filter_path.suffix == '.npy':
+            loaded_ids = np.load(filter_path, allow_pickle=True)
+            filter_ids = loaded_ids[0] if loaded_ids.ndim == 2 else loaded_ids
+        else:
+            filter_ids = [line.strip() for line in filter_path.read_text(encoding='utf-8-sig').splitlines()
+                          if line.strip() and not line.lstrip().startswith('#')]
+        filter_ids = set(map(str, filter_ids))
+    else:
+        filter_ids = None
 
     pdbids = [x for x in os.listdir(args.dir)
-              if os.path.isdir("%s/%s"%(args.dir, x)) and x in casf_pdbids]
+              if os.path.isdir(os.path.join(args.dir, x)) and (filter_ids is None or x in filter_ids)]
     args.ref = pd.read_csv(args.ref, index_col=0, header=0)
     if args.parallel:
         results = Parallel(n_jobs=-1)(delayed(pdbbind_handle)(pdbid, args) for pdbid in pdbids)
@@ -445,9 +456,11 @@ def main():
             results.append(pdbbind_handle(pdbid,i,  args))
     results = list(filter(lambda x: x[1] != None, results))
     ids, graphs_p, graphs_l, labels = list(zip(*results))
-    np.save("%s_ids"%args.outprefix, (ids, labels))
-    th.save(graphs_p, "%s_prot.pt"%args.outprefix)
-    th.save(graphs_l, "%s_lig.pt"%args.outprefix)
+    outprefix = Path(args.outprefix)
+    outprefix.parent.mkdir(parents=True, exist_ok=True)
+    np.save(str(outprefix) + "_ids", (ids, labels))
+    th.save(graphs_p, str(outprefix) + "_prot.pt")
+    th.save(graphs_l, str(outprefix) + "_lig.pt")
     print('train_data:', len(ids))
     print('Finish!')
 

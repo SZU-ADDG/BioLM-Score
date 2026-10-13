@@ -1,0 +1,28 @@
+{
+  "data_policy": "Identifier-only metadata; benchmark structures, poses, affinity/activity labels, embeddings, and model weights are not redistributed.",
+  "files": {
+    "time_split_train": {"path": "BioLM_Score/data/train_ids.txt", "count": 16014, "sha256": "1c0f45af7332aa7106285b35893484c90f79480b46d4e412b4924def055a3def"},
+    "time_split_validation": {"path": "BioLM_Score/data/val_ids.txt", "count": 942, "sha256": "ddd390dede9ecd4d2727a87faba9322dcac3c8f9fdc8099be994f60e85060ea1"},
+    "time_split_casf_exclusion": {"path": "BioLM_Score/data/casf_excluded_ids.txt", "count": 285, "sha256": "6dd4fa49caeb7156be0b0e17ea91488c231f5734e2faec181134f5bf1d9b3ec4"},
+    "lp_pdbbind_model_compatible_train": {"path": "reproducibility/identifiers/LP_PDBBind_model_compatible_train_ids.txt", "count": 7393, "sha256": "cd3fb86d7de1b6a06ad741c44a55ec4a146dcf45c77e0db1111d889ddf1aadd1"},
+    "lp_pdbbind_model_compatible_validation": {"path": "reproducibility/identifiers/LP_PDBBind_model_compatible_val_ids.txt", "count": 958, "sha256": "bc638c057b76af5426c56c09fff1ba0ffd9279024e04af8852236390ed2aeccc"},
+    "bdb2020plus_pdb_ids": {"path": "reproducibility/identifiers/BDB2020plus_pdb_ids.txt", "count": 115, "sha256": "72e45b5e6ed80b4c52f6f3d79cd278a83a865eb9931274f919daea69bddedabf"},
+    "dekois2_target_ids": {"path": "reproducibility/identifiers/DEKOIS2.0_target_ids.txt", "count": 81, "sha256": "392bdd359c9ee3969f08289f7770f55f3a84faaf41ff10959ff21882fc5fd3d0"},
+    "dekois2_target_chain_map": {"path": "reproducibility/identifiers/DEKOIS2.0_target_chain_map.tsv", "rows": 88, "unique_targets": 81, "sha256": "8846d74d1ffeb146eaec286b214377de642ee1e6e6e561d8161b3f33fb242bb1"},
+    "pdbbind_mmseqs_target_groups": {"path": "reproducibility/identifiers/PDBbind_v2020_MMseqs2_100_80_target_groups.tsv", "rows": 19015, "unique_members": 19015, "sha256": "67d37046dad63981fe4bd222c105246df27bec9cf36c71a51a1d1e4609069e20"}
+  },
+  "sources": {
+    "lp_pdbbind_repository": "https://github.com/THGLab/LP-PDBBind",
+    "lp_pdbbind_csv_sha256": "1f18a0a341be0332d5a8190ca883c5020debe147816ecb920f5219cc4b3d2c55",
+    "bdb2020plus_archive": "https://github.com/THGLab/LP-PDBBind/tree/main/dataset",
+    "dekois2_paper": "https://doi.org/10.1021/ci400115b",
+    "zenodo_checkpoints": "https://doi.org/10.5281/zenodo.21878818",
+    "pdbbind_mmseqs_target_groups": "PDBbind v2020 target-group mapping used by the 2026-10-09 protein-LM shuffle controls; see docs/REPRODUCIBILITY.md for the exact identity/coverage definition."
+  },
+  "notes": [
+    "LP-PDBBind model-compatible training and validation identifiers are derived from the upstream LP_PDBBind.csv using the documented CL/split/non-covalent filters; they are not asserted to be standalone upstream split files.",
+    "The DEKOIS 2.0 target inventory contains 81 targets and the associated sequence-query mapping has 88 rows because some targets have multiple chain queries.",
+    "The PDBbind target-group TSV contains only representative/member PDB identifiers (no sequences or structures) and is included to preserve the exact donor-exclusion mapping used by cross-target shuffle controls.",
+    "The MMseqs2 executable version used to create the frozen PDBbind target-group TSV was not retained in the available run metadata; the committed mapping and SHA-256 are the authoritative reproduction input."
+  ]
+}

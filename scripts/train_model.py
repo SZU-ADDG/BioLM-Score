@@ -7,10 +7,12 @@ import numpy as np
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
 import sys
+from pathlib import Path
 
 from torch.utils.tensorboard import SummaryWriter
 
-sys.path.append("/data1/***/codes/BioLM_Score/")
+REPO_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO_ROOT))
 from BioLM_Score.data.data2 import PDBbindDataset
 from BioLM_Score.model.model4 import BioLLMScore, GraphTransformer, GatedGCN
 from BioLM_Score.model.utils2 import EarlyStopping, set_random_seed, run_a_train_epoch, run_an_eval_epoch, mdn_loss_fn, collate_fn
@@ -38,8 +40,13 @@ if __name__ == '__main__':
 	p.add_argument('--original_model_path', type=str, default=None)
 	p.add_argument('--lr', type=float, default=0.001)
 	p.add_argument('--weight_decay', type=int, default=5)
-	p.add_argument('--data_dir', type=str, default="/data1/***/codes/GenScore-main/data/train_data3/")
+	p.add_argument('--data_dir', type=str, required=True,
+	               help='Directory containing the prepared *_ids.npy, *_prot.pt, and *_lig.pt files')
 	p.add_argument('--data_prefix', type=str, default="v2020_train")
+	p.add_argument('--protein_embedding_dir', type=str, required=True,
+	               help='Directory containing per-complex protein pocket embeddings')
+	p.add_argument('--ligand_embedding_dir', type=str, required=True,
+	               help='Directory containing per-complex ligand embeddings')
 	p.add_argument('--valnum', type=int, default=1500)
 	p.add_argument('--seeds', type=int, default=126)
 	p.add_argument('--hidden_dim0', type=int, default=128)
@@ -48,7 +55,7 @@ if __name__ == '__main__':
 	p.add_argument('--dropout_rate', type=float, default=0.15)
 	p.add_argument('--dist_threhold', type=float, default=7., help="the distance threhold for training")
 	p.add_argument('--dist_threhold2', type=float, default=5., help="the distance threhold for testing")
-	p.add_argument('--log_dir', type=str, default="/data1/***/codes/GenScore-main/logfile_new/",help="tensorboard logfile path")
+	p.add_argument('--log_dir', type=str, default="outputs/logs", help="TensorBoard log directory")
 	#p.add_argument('--device', type=str, default="cpu")
 	args = p.parse_args()
 
@@ -56,11 +63,11 @@ if __name__ == '__main__':
 
 	args.device = 'cuda' if th.cuda.is_available() else 'cpu'
 	
-	data = PDBbindDataset(ids="%s/%s_ids.npy"%(args.data_dir, args.data_prefix),
-					  ligs="%s/%s_lig.pt"%(args.data_dir, args.data_prefix),
-					  prots="%s/%s_prot.pt"%(args.data_dir, args.data_prefix),
-					  protein_embs = "/data1/***/codes/esm-main/data/protein_embeddings/pdbbindv2020_embeddings/pocket_embeddings/",
-					  ligand_embs = "/data1/***/codes/Chemformer-main/data/ligand_embeddings3/pdbbindv2020/"
+	data = PDBbindDataset(ids=str(Path(args.data_dir) / f"{args.data_prefix}_ids.npy"),
+					  ligs=str(Path(args.data_dir) / f"{args.data_prefix}_lig.pt"),
+					  prots=str(Path(args.data_dir) / f"{args.data_prefix}_prot.pt"),
+					  protein_embs=args.protein_embedding_dir,
+					  ligand_embs=args.ligand_embedding_dir
 					  )
 	
 	train_inds, val_inds = data.train_and_test_split(valnum=args.valnum, seed=args.seeds)
@@ -152,7 +159,9 @@ if __name__ == '__main__':
 
 
 
-	writer = SummaryWriter(f"{args.log_dir}/{args.model_path.split('.pth')[0]}")
+	Path(args.model_path).parent.mkdir(parents=True, exist_ok=True)
+	Path(args.log_dir).mkdir(parents=True, exist_ok=True)
+	writer = SummaryWriter(str(Path(args.log_dir) / Path(args.model_path).stem))
 	for epoch in range(args.num_epochs):	
 		# Train
 		total_loss_train, mdn_loss_train, affi_loss_train, atom_loss_train, bond_loss_train = run_a_train_epoch(epoch, model, train_loader, optimizer, affi_weight=args.affi_weight, aux_weight=args.aux_weight, dist_threhold=args.dist_threhold2, device=args.device)	

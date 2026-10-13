@@ -1,4 +1,5 @@
 import ast
+import argparse
 import os
 import torch
 import pandas as pd
@@ -10,13 +11,22 @@ import molbart.utils.data_utils as util
 from molbart.models.transformer_models import BARTModel
 from molbart.utils.tokenizers.tokenizers import ChemformerTokenizer
 
-# === 参数 ===
-vocabulary_path = util.DEFAULT_VOCAB_PATH
-model_path = '/data1/***/codes/Chemformer-main/data/weight/combined-large/step=1000000.ckpt'
-input_csv_path = "/data1/***/codes/Chemformer-main/data/ligand_embeddings2/pdbbindv2020_smiles.csv"
-output_dir = "/data1/***/codes/Chemformer-main/data/ligand_embeddings2/pdbbindv2020"
-log_file_path = './data/failed_get_ligand_feature.log'
-batch_size = 32
+parser = argparse.ArgumentParser(description="Generate Chemformer atom embeddings from an input CSV.")
+parser.add_argument("--model-checkpoint", required=True)
+parser.add_argument("--input-csv", required=True)
+parser.add_argument("--output-dir", required=True)
+parser.add_argument("--vocabulary", default=util.DEFAULT_VOCAB_PATH)
+parser.add_argument("--log-file", default="failed_get_ligand_feature.log")
+parser.add_argument("--batch-size", type=int, default=32)
+parser.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
+args = parser.parse_args()
+
+vocabulary_path = args.vocabulary
+model_path = args.model_checkpoint
+input_csv_path = args.input_csv
+output_dir = args.output_dir
+log_file_path = args.log_file
+batch_size = args.batch_size
 seq_len = util.DEFAULT_MAX_SEQ_LEN
 
 # === 非原子 token 表
@@ -28,7 +38,7 @@ non_atomic_tokens = [
 ] + [f"<UNUSED_{i}>" for i in range(200)] + [f"%{i}" for i in range(10, 100)]
 
 # === 初始化 ===
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = torch.device(args.device)
 tokenizer = ChemformerTokenizer(filename=vocabulary_path)
 vocabulary_size = len(tokenizer)
 sampler = DecodeSampler(tokenizer, util.DEFAULT_MAX_SEQ_LEN)
@@ -40,6 +50,7 @@ model.eval()
 
 df = pd.read_csv(input_csv_path)
 os.makedirs(output_dir, exist_ok=True)
+os.makedirs(os.path.dirname(os.path.abspath(log_file_path)), exist_ok=True)
 
 # === 批处理 + 记录错误 ===
 with torch.no_grad(), open(log_file_path, 'w') as log_file:

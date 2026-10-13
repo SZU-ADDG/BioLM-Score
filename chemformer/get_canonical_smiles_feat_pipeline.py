@@ -2,7 +2,9 @@ import os
 
 from rdkit import Chem
 import ast
+import argparse
 import os
+from pathlib import Path
 import torch
 import pandas as pd
 import numpy as np
@@ -13,11 +15,19 @@ import molbart.utils.data_utils as util
 from molbart.models.transformer_models import BARTModel
 from molbart.utils.tokenizers.tokenizers import ChemformerTokenizer
 
-# === 参数 ===
-vocabulary_path = util.DEFAULT_VOCAB_PATH
-model_path = '/data1/***/codes/Chemformer-main/data/weight/combined-large/step=1000000.ckpt'
-log_file_path = './data/failed_get_ligand_feature.log'
-batch_size = 32
+parser = argparse.ArgumentParser(description="Generate Chemformer embeddings for a directory of benchmark ligands.")
+parser.add_argument("--model-checkpoint", required=True)
+parser.add_argument("--benchmark-root", type=Path, required=True)
+parser.add_argument("--output-dir", type=Path, required=True)
+parser.add_argument("--vocabulary", default=util.DEFAULT_VOCAB_PATH)
+parser.add_argument("--batch-size", type=int, default=32)
+parser.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
+args = parser.parse_args()
+
+vocabulary_path = args.vocabulary
+model_path = args.model_checkpoint
+log_file_path = str(args.output_dir / "failed_get_ligand_feature.log")
+batch_size = args.batch_size
 seq_len = util.DEFAULT_MAX_SEQ_LEN
 
 # === 非原子 token 表
@@ -29,7 +39,7 @@ non_atomic_tokens = [
 ] + [f"<UNUSED_{i}>" for i in range(200)] + [f"%{i}" for i in range(10, 100)]
 
 # === 初始化 ===
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = torch.device(args.device)
 tokenizer = ChemformerTokenizer(filename=vocabulary_path)
 vocabulary_size = len(tokenizer)
 sampler = DecodeSampler(tokenizer, util.DEFAULT_MAX_SEQ_LEN)
@@ -107,9 +117,9 @@ def get_ligand_atom_features(sdf_path, model, tokenizer, device, seq_len, non_at
     return lig_features
 
 
-root_dir = "/data1/***/codes/GenScore-main/data/posebusters_benchmark_set/"
-out_path = "/data1/***/codes/GenScore-main/data/posebusters_embs/ligand_embs"
-
+root_dir = args.benchmark_root
+out_path = args.output_dir
+out_path.mkdir(parents=True, exist_ok=True)
 
 for subdir in os.listdir(root_dir):
     subdir_path = os.path.join(root_dir, subdir)

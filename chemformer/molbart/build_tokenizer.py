@@ -3,7 +3,8 @@ from pathlib import Path
 import hydra
 import pandas as pd
 import os,sys
-sys.path.append('/data1/chenby/codes/Chemformer-main')
+CHEMFORMER_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(CHEMFORMER_ROOT))
 
 from molbart.utils.tokenizers.tokenizers import ChemformerTokenizer
 from molbart.utils.data_utils import REGEX

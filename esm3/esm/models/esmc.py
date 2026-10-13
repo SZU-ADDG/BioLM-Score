@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import contextlib
+import os
 
 import attr
 import torch
@@ -83,7 +84,11 @@ class ESMC(nn.Module, ESMCInferenceClient):
         if device is None:
             device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         
-        local_weights_path = "/data1/chenby/codes/esm-main/trained_model/esmc_600m_2024_12_v0.pth"
+        local_weights_path = os.environ.get("ESMC_600M_WEIGHTS")
+        if not local_weights_path:
+            raise FileNotFoundError(
+                "Set ESMC_600M_WEIGHTS to the locally obtained ESM-C 600M checkpoint path."
+            )
 
         client = load_local_model("esmc_600", device=device)
         

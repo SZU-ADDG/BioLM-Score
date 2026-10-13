@@ -1,0 +1,10 @@
+{
+  "models": [
+    {"variant": "full_biolm_seed8", "model_type": "biolm", "ablation": "full", "checkpoint": "../../checkpoints/mmgatedgcn_1.0_03.pth"},
+    {"variant": "full_biolm_seed23", "model_type": "biolm", "ablation": "full", "checkpoint": "../../checkpoints/mmgatedgcn_1.0_01.pth"},
+    {"variant": "full_biolm_seed24", "model_type": "biolm", "ablation": "full", "checkpoint": "../../checkpoints/mmgatedgcn_1.0_02.pth"},
+    {"variant": "graph_only_genscore_seed8", "model_type": "genscore", "ablation": "full", "checkpoint": "../../checkpoints/gatedgcn_1.0_03.pth"},
+    {"variant": "graph_only_genscore_seed23", "model_type": "genscore", "ablation": "full", "checkpoint": "../../checkpoints/gatedgcn_1.0_01.pth"},
+    {"variant": "graph_only_genscore_seed24", "model_type": "genscore", "ablation": "full", "checkpoint": "../../checkpoints/gatedgcn_1.0_02.pth"}
+  ]
+}

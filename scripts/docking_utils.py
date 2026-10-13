@@ -9,6 +9,7 @@ import torch as th
 from joblib import Parallel, delayed
 import pandas as pd
 import os, sys
+from pathlib import Path
 import pickle
 from rdkit import Chem
 from rdkit.Chem import rdMolTransforms, AllChem, rdDistGeom, rdForceFieldHelpers
@@ -16,7 +17,8 @@ from torch.distributions import Normal
 from meeko import MoleculePreparation, PDBQTMolecule, PDBQTWriterLegacy, RDKitMolCreate
 
 
-sys.path.append("/data1/chenby/codes/GenScore-main")
+REPO_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO_ROOT))
 # from torch_geometric.loader import DataLoader
 from torch.utils.data import DataLoader
 from BioLM_Score.data.data2 import VSDataset
@@ -79,7 +81,7 @@ def get_score_model(modelpath, **kwargs):
     args = {}
     args["batch_size"] = 128
     args["dist_threhold"] = 5
-    args['device'] = 'cuda'
+    args['device'] = kwargs.get('device', 'cuda' if th.cuda.is_available() else 'cpu')
     args["num_workers"] = 10
     args["num_node_featsp"] = 41
     args["num_node_featsl"] = 41
