@@ -82,7 +82,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--limit-items", type=int, help="Smoke test only")
     parser.add_argument("--limit-ligands", type=int, help="Smoke test only")
     parser.add_argument("--controls", nargs="+", choices=CONTROLS, default=CONTROLS)
-    parser.add_argument("--shuffle-seed", type=int, default=20260811)
+    parser.add_argument("--shuffle-seed", type=int, required=True,
+                        help="Explicit shuffle randomization value supplied by the caller")
     return parser.parse_args()
 
 

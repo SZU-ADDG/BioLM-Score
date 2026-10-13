@@ -220,7 +220,7 @@ def main() -> None:
     for row in summary_rows:
         comparison_rows.append(
             {
-                "source": "This BDB2020+ evaluation; mean of seeds 23/24/8",
+                "source": "This BDB2020+ evaluation; mean across independent runs",
                 "method": row["model"],
                 "training": "original random PDBBind split; validation-only affine calibration",
                 "rmse_kcal_mol": row["rmse_kcal_mol_mean"],
@@ -268,7 +268,7 @@ def main() -> None:
         "dataset": "BDB2020+",
         "n_complexes": 115,
         "models": ["BioLM-Score", "GenScore"],
-        "seeds": [23, 24, 8],
+        "seeds": sorted(int(value) for value in per_seed_frame["seed"].unique()),
         "pKa_to_delta_g_factor_kcal_mol": float(PKA_TO_DG),
         "calibration": (
             "Per model and seed, ordinary least squares raw_score -> pKa fitted "
@@ -295,14 +295,14 @@ def main() -> None:
         "## Protocol",
         "",
         "- 115 accurate BDB2020+ co-crystal complexes.",
-        "- Original random-split checkpoints, seeds 23, 24, and 8.",
+        "- Original random-split checkpoints from the independent runs supplied in the input files.",
         "- Raw score: MDN probability-density sum over protein–ligand pairs at ≤5 Å.",
         "- Pearson/Spearman are computed directly from raw scores.",
-        "- RMSE uses a seed-specific affine mapping learned only from the exact original "
+        "- RMSE uses a run-specific affine mapping learned only from the exact original "
         "1,500-complex validation split, then frozen before BDB2020+ evaluation.",
         f"- pKa was converted to ΔG with ΔG = {PKA_TO_DG:.6f} × pKa kcal/mol (298 K).",
         "",
-        "## Three-seed results",
+        "## Independent-run results",
         "",
         markdown_table(summary_frame),
         "",

@@ -36,7 +36,7 @@ class Chemformer:
 
             The config includes the following arguments:
                 # Trainer args
-                seed: 1
+                seed: null
                 batch_size: 128
                 n_gpus (int): Number of GPUs to use.
                 i_chunk: 0              # For inference

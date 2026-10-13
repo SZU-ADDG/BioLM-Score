@@ -43,7 +43,8 @@ def main() -> None:
     parser.add_argument("--prepared-ids", required=True, type=Path,
                         help="The exact *_ids.npy file consumed by train_model.py")
     parser.add_argument("--output-dir", required=True, type=Path)
-    parser.add_argument("--seeds", nargs="+", type=int, default=[8, 23, 24])
+    parser.add_argument("--seeds", nargs="+", type=int, required=True,
+                        help="Explicit run randomization values supplied by the caller")
     parser.add_argument("--valnum", type=int, default=1500)
     args = parser.parse_args()
 

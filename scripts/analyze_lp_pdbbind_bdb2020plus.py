@@ -17,7 +17,6 @@ R_KCAL = 1.987204e-3
 TEMPERATURE_K = 298.0
 PKA_TO_DG = -R_KCAL * TEMPERATURE_K * np.log(10.0)
 MODELS = ["BioLM-Score", "GenScore"]
-SEEDS = [8, 23, 24]
 PAPER_ROWS = [
     {
         "method": "AutoDock Vina",
@@ -118,6 +117,8 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--raw", required=True, type=Path)
     parser.add_argument("--analysis", required=True, type=Path)
+    parser.add_argument("--seeds", nargs="+", type=int, required=True,
+                        help="Explicit run randomization values supplied by the caller")
     args = parser.parse_args()
     args.analysis.mkdir(parents=True, exist_ok=True)
 
@@ -125,7 +126,7 @@ def main() -> None:
     bdb_frames = []
     worker_status = []
     for model in MODELS:
-        for seed in SEEDS:
+        for seed in args.seeds:
             key = f"{model.replace('-', '').lower()}_seed{seed}"
             status_path = args.raw / f"{key}_complete.json"
             status = json.loads(status_path.read_text(encoding="utf-8"))
@@ -219,7 +220,7 @@ def main() -> None:
     atomic_csv(args.analysis / "three_seed_mean_sd.csv", summary)
 
     paired_rows = []
-    for seed in SEEDS:
+    for seed in args.seeds:
         bio = per_seed_frame[
             (per_seed_frame["model"] == "BioLM-Score")
             & (per_seed_frame["seed"] == seed)
@@ -253,7 +254,7 @@ def main() -> None:
     for row in summary_rows:
         comparison_rows.append(
             {
-                "source": "This work; mean of LP-retrained seeds 8/23/24",
+                "source": "This work; mean across LP-retrained independent runs",
                 "method": row["model"],
                 "training": "LP-PDBBind CL1/CL2 non-covalent; validation-only affine calibration",
                 "rmse_kcal_mol": row["rmse_kcal_mol_mean"],
@@ -279,7 +280,7 @@ def main() -> None:
             "fingerprint": "c41265c4e53c583237aa4f60a44089c707d5b2ac912869c6fa1afff642b36053",
         },
         "models": MODELS,
-        "seeds": SEEDS,
+        "seeds": list(args.seeds),
         "calibration": (
             "For each model and seed, ordinary least squares raw_score -> pKa "
             "was fitted only on the exact LP validation set (n=958), then frozen "

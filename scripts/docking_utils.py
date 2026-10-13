@@ -447,7 +447,6 @@ def ligand_rdmol_to_pdbqt_string(
     if run_etkdg:
         assert rdmol.GetNumConformers() == 0
         param = rdDistGeom.srETKDGv3()
-        param.randomSeed = 1
         param.numThreads = 1
         rdDistGeom.EmbedMolecule(rdmol, param)
     if run_uff:

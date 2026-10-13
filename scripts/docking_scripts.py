@@ -10,6 +10,7 @@ import os
 from vina import Vina
 from pathlib import Path
 import argparse
+from typing import Optional
 
 os.environ["OMP_NUM_THREADS"] = "1"
 os.environ["MKL_NUM_THREADS"] = "1"
@@ -29,10 +30,6 @@ import copy
 
 from tqdm import tqdm
 
-# set the random seeds for reproducibility
-np.random.seed(123)
-th.cuda.manual_seed_all(123)
-th.manual_seed(123)
 import sys
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
@@ -73,13 +70,16 @@ def vina_refine_pose_from_pdbqt_string(
     box_size,            # [sx, sy, sz]
     out_pose_pdbqt: str,
     cpu: int = 1,
-    seed: int = 42,
+    seed: Optional[int] = None,
 ):
     """
     对“当前给定的 ligand pose(PDBQT)”做 Vina 局部优化（微调），并写出精修后的 pose。
     返回：(score_before, score_after, energy_components_before, energy_components_after)
     """
-    v = Vina(sf_name="vina", cpu=cpu, seed=seed)
+    vina_kwargs = {"sf_name": "vina", "cpu": cpu}
+    if seed is not None:
+        vina_kwargs["seed"] = seed
+    v = Vina(**vina_kwargs)
 
     # 1) 载入受体与配体（配体用 string 形式可避免频繁落盘）
     v.set_receptor(receptor_pdbqt)
@@ -159,7 +159,7 @@ def dock_compound(data, pdbid, ligand_path, protein_pdbqt, out_path, dist_thresh
     print("%s start optimize..."%(pdbid))
     result = differential_evolution(opt.score_conformation, list(zip(bounds[0],bounds[1])), maxiter=800,
                                     popsize=8,
-                                    mutation=(0.5, 1), recombination=0.8, disp=False, seed=123, workers=1)
+                                    mutation=(0.5, 1), recombination=0.8, disp=False, seed=None, workers=1)
     print("%s end optimize..."%(pdbid))
 
     # Get optimized molecule and RMSD

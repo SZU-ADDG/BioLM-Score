@@ -283,7 +283,8 @@ def main() -> None:
     parser.add_argument("--output-dir", required=True, type=Path)
     parser.add_argument("--surfdock-summary", required=True, type=Path)
     parser.add_argument("--bootstrap", type=int, default=1000)
-    parser.add_argument("--bootstrap-seed", type=int, default=20260726)
+    parser.add_argument("--bootstrap-seed", type=int, required=True,
+                        help="Explicit bootstrap randomization value supplied by the caller")
     args = parser.parse_args()
 
     root = args.experiment_root
@@ -823,7 +824,7 @@ def main() -> None:
     sns.histplot(protein_df["max_identity_percent"], bins=20, ax=axes[0], color="#005A9C")
     axes[0].set_xlabel("Nearest supervised-training protein identity (%)")
     axes[0].set_ylabel("DEKOIS targets")
-    sampled_similarity = prepared_all.sample(min(30000, len(prepared_all)), random_state=20260726)
+    sampled_similarity = prepared_all.sample(min(30000, len(prepared_all)))
     sns.histplot(
         data=sampled_similarity,
         x="max_tanimoto",
@@ -858,7 +859,7 @@ def main() -> None:
     save_figure(fig, path)
     figure_paths.append(path.with_suffix(".png"))
 
-    plot_size = prepared_all.sample(min(40000, len(prepared_all)), random_state=20260726).copy()
+    plot_size = prepared_all.sample(min(40000, len(prepared_all))).copy()
     plot_size["class"] = plot_size["label"].map({0: "Decoy", 1: "Active"})
     melted_size = plot_size.melt(
         id_vars=["class"], value_vars=["heavy_atoms", "molecular_weight", "rotatable_bonds"],

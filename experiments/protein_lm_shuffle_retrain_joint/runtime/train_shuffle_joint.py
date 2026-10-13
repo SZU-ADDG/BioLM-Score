@@ -89,7 +89,8 @@ def main():
     p.add_argument('--seed',type=int,required=True); p.add_argument('--output',type=Path,required=True)
     p.add_argument('--train-data-dir',type=Path,required=True,help='Directory containing v2020_train_{ids,prot,lig} files')
     p.add_argument('--embedding-bank-dir',type=Path,required=True,help='Directory created by prepare_shuffle_assets.py')
-    p.add_argument('--shuffle-seed',type=int,default=20261009); p.add_argument('--num-epochs',type=int,default=2000)
+    p.add_argument('--shuffle-seed',type=int,required=True,
+                   help='Explicit shuffle randomization value supplied by the caller'); p.add_argument('--num-epochs',type=int,default=2000)
     p.add_argument('--preflight',action='store_true'); p.add_argument('--preflight-batches',type=int,default=3)
     p.add_argument('--allocator-fraction',type=float,default=0.48)
     a=p.parse_args(); a.output=a.output.resolve(); a.train_data_dir=a.train_data_dir.resolve(); a.embedding_bank_dir=a.embedding_bank_dir.resolve()

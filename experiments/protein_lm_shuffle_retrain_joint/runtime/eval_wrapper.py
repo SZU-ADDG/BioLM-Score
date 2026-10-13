@@ -39,7 +39,7 @@ def main():
         project=Path(rest[rest.index('--project-root')+1]); table=module.read_casf_table(project/'data/CASF-2016/power_scoring/CoreSet.dat','#code')
         groups=dict(zip(table['#code'].astype(str),table['target'].astype(str)))
     class Bank(OriginalBank):
-        def __init__(self,embedding_paths,seed=20261009):
+        def __init__(self,embedding_paths,seed):
             super().__init__(embedding_paths,seed)
             grouped=defaultdict(list)
             for key in self.original: grouped[groups.get(key,key)].append(key)

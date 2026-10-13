@@ -10,7 +10,7 @@ defaults:
 
 
 # Trainer
-seed: 1
+seed: null
 n_gpus: 1
 
 # Data

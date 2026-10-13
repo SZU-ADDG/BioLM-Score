@@ -75,7 +75,8 @@ def build_model(args, sampler, vocab_size, total_steps, pad_token_idx):
 
 @hydra.main(version_base=None, config_path="config", config_name="pretrain")
 def main(args):
-    util.seed_everything(args.seed)
+    if args.seed is not None:
+        util.seed_everything(args.seed)
 
     if args.dataset_type == "zinc" and args.train_tokens is not None:
         raise ValueError("train_tokens arg must be None when using zinc dataset.")

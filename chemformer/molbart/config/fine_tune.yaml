@@ -15,7 +15,7 @@ deepspeed_config_path: "ds_config.json"
 
 
 # Trainer
-seed: 73
+seed: null
 resume: false
 batch_size: 64
 n_epochs: 50

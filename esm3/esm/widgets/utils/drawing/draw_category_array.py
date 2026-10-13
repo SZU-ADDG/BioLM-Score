@@ -38,7 +38,7 @@ def draw_data_array(
 
         cmap_colors_rgb = [mcolors.to_rgb(color) for color in cmap_colors]
         if randomize_cmap:
-            rng = random.Random(42)
+            rng = random.Random()
             rng.shuffle(cmap_colors_rgb)
         rgb_colors = cmap_colors_rgb[: len(categories)]
 

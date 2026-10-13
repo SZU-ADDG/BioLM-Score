@@ -21,7 +21,6 @@ import pandas as pd
 
 
 DEFAULT_TARGETS = Path(__file__).resolve().parents[1] / "reproducibility/identifiers/DEKOIS2.0_target_ids.txt"
-DEFAULT_SEEDS = (8, 23, 24)
 CONTROLS = ("within_pocket_lm_shuffle", "cross_target_lm_shuffle")
 METRICS = ("auroc", "bedroc_80_5", "ef1_percent")
 
@@ -157,9 +156,11 @@ def main() -> None:
     parser.add_argument("--output-dir", required=True, type=Path)
     parser.add_argument("--baseline-metrics", type=Path,
                         help="Optional per-target/per-seed metrics CSV for Full and Graph-only paired tests")
-    parser.add_argument("--seeds", nargs="+", type=int, default=list(DEFAULT_SEEDS))
+    parser.add_argument("--seeds", nargs="+", type=int, required=True,
+                        help="Explicit run randomization values supplied by the caller")
     parser.add_argument("--bootstrap-replicates", type=int, default=10_000)
-    parser.add_argument("--bootstrap-seed", type=int, default=20_261_009)
+    parser.add_argument("--bootstrap-seed", type=int, required=True,
+                        help="Explicit bootstrap randomization value supplied by the caller")
     args = parser.parse_args()
 
     seeds = tuple(sorted(set(args.seeds)))

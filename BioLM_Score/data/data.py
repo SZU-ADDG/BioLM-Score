@@ -93,7 +93,7 @@ class PDBbindDataset(Dataset):
 		prot_emb = self.protein_embs[idx]
 		return pdbid, gp, gl, prot_emb, label
 
-	def train_and_test_split(self, valfrac=0.2, valnum=None, seed=0):
+	def train_and_test_split(self, valfrac=0.2, valnum=None, seed=None):
 		#random.seed(seed)
 		np.random.seed(seed)
 		if valnum is None:

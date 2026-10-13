@@ -8,7 +8,8 @@ from molbart.models import Chemformer
 
 @hydra.main(version_base=None, config_path="config", config_name="fine_tune")
 def main(args):
-    util.seed_everything(args.seed)
+    if args.seed is not None:
+        util.seed_everything(args.seed)
     print("Fine-tuning CHEMFORMER.")
     chemformer = Chemformer(args)
     t0 = time.time()

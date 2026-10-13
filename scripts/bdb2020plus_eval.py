@@ -38,10 +38,12 @@ def load_model_manifest(path: Path):
         if model_name not in {"BioLM-Score", "GenScore"}:
             raise ValueError(f"unsupported model name: {model_name}")
         models.append((model_name, seed, checkpoint))
-    expected = {(model, seed) for model in ("BioLM-Score", "GenScore") for seed in (23, 24, 8)}
     observed = {(model, seed) for model, seed, _ in models}
-    if len(models) != 6 or observed != expected:
-        raise ValueError(f"expected one checkpoint per model/seed pair; got {observed}")
+    model_names = {model for model, _, _ in models}
+    run_values = {seed for _, seed, _ in models}
+    expected = {(model, seed) for model in model_names for seed in run_values}
+    if model_names != {"BioLM-Score", "GenScore"} or not run_values or observed != expected:
+        raise ValueError(f"expected one checkpoint per model/run pair; got {observed}")
     return models
 
 
@@ -382,7 +384,7 @@ def main() -> None:
             "validation_rows": len(combined_validation),
             "bdb_rows": len(combined_bdb),
             "models": ["BioLM-Score", "GenScore"],
-            "seeds": [23, 24, 8],
+            "seeds": sorted({int(seed) for _, seed, _ in models}),
             "validation_size_per_seed_model": 1500,
             "bdb_size_per_seed_model": 115,
             "score_definition": "sum of MDN pair probability densities for real distances <=5 A",

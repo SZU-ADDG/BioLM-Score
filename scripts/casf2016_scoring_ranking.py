@@ -45,7 +45,6 @@ args={}
 args["batch_size"] = 128
 args["dist_threhold"] = 5.
 args['device'] = 'cuda' if th.cuda.is_available() else 'cpu'
-args['seeds'] = 126
 args["num_workers"] = args1.num_workers
 args["model_path"] = args1.model_path
 args["model_type"] = args1.model_type

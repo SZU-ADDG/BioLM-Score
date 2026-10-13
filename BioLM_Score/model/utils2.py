@@ -342,7 +342,7 @@ def run_an_eval_epoch(model, data_loader, pred=False, atom_contribution=False, r
             return total_loss / len(data_loader.dataset)+ affi_loss * affi_weight, mdn_loss / len(data_loader.dataset), affi_loss, atom_loss / len(data_loader.dataset), bond_loss / len(data_loader.dataset)
 
 
-# def set_random_seed(seed=10):
+# def set_random_seed(seed=None):
 #     random.seed(seed)
 #     os.environ['PYTHONHASHSEED'] = str(seed)
 #     np.random.seed(seed)
@@ -354,7 +354,9 @@ def run_an_eval_epoch(model, data_loader, pred=False, atom_contribution=False, r
 #         th.cuda.manual_seed_all(seed)
 
 
-def set_random_seed(seed=10):
+def set_random_seed(seed=None):
+    if seed is None:
+        return
     random.seed(seed)
     np.random.seed(seed)
     th.manual_seed(seed)

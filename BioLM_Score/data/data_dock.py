@@ -105,7 +105,7 @@ class PDBbindDataset(Dataset):
 		lig_emb = self.ligand_embs[idx]
 		return pdbid, gp, gl, prot_emb, lig_emb, label
 
-	def train_and_test_split(self, valfrac=0.2, valnum=None, seed=0):
+	def train_and_test_split(self, valfrac=0.2, valnum=None, seed=None):
 		#random.seed(seed)
 		np.random.seed(seed)
 		if valnum is None:

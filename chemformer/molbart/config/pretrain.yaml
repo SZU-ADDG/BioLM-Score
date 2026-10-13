@@ -11,7 +11,7 @@ output_directory: "tb_logs"
 deepspeed_config_path: "ds_config.json"
 
 # Trainer
-seed: 37
+seed: null
 resume: false
 batch_size: 128
 n_epochs: 10

@@ -9,7 +9,7 @@ defaults:
 
 
 # Trainer
-seed: 1
+seed: null
 batch_size: 120
 n_gpus: 1
 

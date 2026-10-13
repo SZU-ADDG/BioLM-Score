@@ -15,7 +15,7 @@ The cross-target shuffle uses the committed identifier-only file `reproducibilit
 The expected inputs are 19,015 ordered training IDs/labels, corresponding protein and ligand graph files, one protein embedding `.npy` and ligand embedding `.npy` per complex, and the committed group map. Protein embeddings must have 1,152 columns and one row per pocket residue; ligand embeddings must have 1,024 columns and one row per ligand atom. The preparation script checks counts, graph/embedding row alignment, finite values, CASF exclusion, and group-map coverage before writing derived local caches and SHA-256 metadata.
 
 ```bash
-python experiments/protein_lm_shuffle_retrain_joint_20261009/runtime/prepare_shuffle_assets.py \
+python experiments/protein_lm_shuffle_retrain_joint/runtime/prepare_shuffle_assets.py \
   --project-root /path/to/local/project-with-data \
   --ids-file /path/to/v2020_train_ids.npy \
   --protein-graphs /path/to/v2020_train_prot.pt \
@@ -27,13 +27,13 @@ python experiments/protein_lm_shuffle_retrain_joint_20261009/runtime/prepare_shu
 
 ## Train one control/checkpoint
 
-The training setup is joint BioLM-Score GatedGCN training from scratch, with both protein and ligand LM features enabled, 17,515 training complexes and a seed-matched 1,500-complex validation set. It uses ordinary random mini-batches (batch size 64), learning rate `1e-3`, weight decay `1e-5`, dropout `0.15`, auxiliary-loss weight `1e-3`, 7 Å training cutoff, 5 Å scoring cutoff, maximum 2,000 epochs, and patience 70. Use the pre-specified independent run identifiers for the checkpoint set; their numeric values are intentionally not recorded in this public description. The shuffle RNG is a deterministic function of the model run identifier.
+The training setup is joint BioLM-Score GatedGCN training from scratch, with both protein and ligand LM features enabled, 17,515 training complexes and a run-matched 1,500-complex validation set. It uses ordinary random mini-batches (batch size 64), learning rate `1e-3`, weight decay `1e-5`, dropout `0.15`, auxiliary-loss weight `1e-3`, 7 Å training cutoff, 5 Å scoring cutoff, maximum 2,000 epochs, and patience 70. Use the pre-specified independent run identifiers for the checkpoint set; their numeric values are intentionally not recorded in this public description. The shuffle RNG is a deterministic function of the model run identifier.
 
 Run the command once for each model run identifier and control. For example:
 
 ```bash
-python experiments/protein_lm_shuffle_retrain_joint_20261009/runtime/train_shuffle_joint.py \
-  --control within_pocket_lm_shuffle --seed "$MODEL_SEED" --shuffle-seed "$SHUFFLE_BASE_SEED" \
+python experiments/protein_lm_shuffle_retrain_joint/runtime/train_shuffle_joint.py \
+  --control within_pocket_lm_shuffle --seed "$MODEL_RUN_TOKEN" --shuffle-seed "$SHUFFLE_TOKEN" \
   --train-data-dir /path/to/prepared/pdbbind/train_data \
   --embedding-bank-dir /path/to/local/embedding_bank \
   --output outputs/shuffle/within_${MODEL_RUN_ID}/best.pth
@@ -46,14 +46,14 @@ Repeat with `--control cross_target_lm_shuffle` and each remaining run identifie
 Use the six saved checkpoints as separate, run-matched runs. The model manifest format is shown in `reproducibility/manifests/shuffle_control_model.template.json`; create a one-checkpoint manifest for each run identifier, set its checkpoint path, and run both controls with the corresponding shuffle RNG. The DEKOIS worker imports the released GenScore reference implementation as well as this repository, so make that separate upstream checkout importable in the environment.
 
 ```bash
-python experiments/protein_lm_shuffle_retrain_joint_20261009/runtime/dekois_strict_controls_worker.py \
+python experiments/protein_lm_shuffle_retrain_joint/runtime/dekois_strict_controls_worker.py \
   --project-root /path/to/BioLM-Score \
   --data-root /path/to/prepared/DEKOIS_2.0x \
   --output-root outputs/shuffle/dekois \
   --model-manifest /path/to/model_run_A.json \
   --targets 11betahsd1 17betahsd1 \
   --controls within_pocket_lm_shuffle cross_target_lm_shuffle \
-  --shuffle-seed "$SHUFFLE_SEED_A" --write-descriptors
+  --shuffle-seed "$SHUFFLE_TOKEN_A" --write-descriptors
 ```
 
 Repeat for all 81 identifiers in `reproducibility/identifiers/DEKOIS2.0_target_ids.txt` and for each independent run, using the matching checkpoint and derived shuffle value. The worker emits pose-level raw scores for each control/checkpoint; `scripts/analyze_shuffle_dekois.py` reduces each compound to its maximum-scoring pose and reports AUROC, BEDROC80.5, and EF1%, along with checkpoint-level mean and sample SD. The per-checkpoint CSVs are intermediate audit data; for summary reporting, use the aggregate mean ± sample SD rather than listing all checkpoint values. Optional target-level paired tests require a per-target/per-run baseline metrics CSV for Full BioLM-Score and Graph-only/GenScore.

@@ -257,7 +257,7 @@ def main() -> None:
     parser.add_argument("--bdb-experiment", required=True, type=Path)
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--model", required=True, choices=["BioLM-Score", "GenScore"])
-    parser.add_argument("--seed", required=True, type=int, choices=[8, 23, 24])
+    parser.add_argument("--seed", required=True, type=int)
     parser.add_argument("--checkpoint", required=True, type=Path)
     parser.add_argument("--batch-size", type=int, default=8)
     parser.add_argument("--device", default="cuda")

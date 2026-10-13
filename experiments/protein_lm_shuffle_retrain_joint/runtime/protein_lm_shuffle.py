@@ -41,7 +41,7 @@ class ProteinLMShuffleBank:
     different target while using every source vector exactly once.
     """
 
-    def __init__(self, embedding_paths: dict[str, Path], seed: int = 20260811):
+    def __init__(self, embedding_paths: dict[str, Path], seed: int):
         if len(embedding_paths) < 2:
             raise ValueError("at least two targets are required")
         self.seed = int(seed)

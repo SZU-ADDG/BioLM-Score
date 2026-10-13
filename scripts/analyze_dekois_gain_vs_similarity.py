@@ -110,7 +110,8 @@ def main() -> None:
     parser.add_argument("--metrics-to-test", nargs="+", choices=METRICS, default=list(METRICS))
     parser.add_argument("--output-dir", required=True, type=Path)
     parser.add_argument("--bootstrap-replicates", type=int, default=10000)
-    parser.add_argument("--bootstrap-seed", type=int, default=20261012)
+    parser.add_argument("--bootstrap-seed", type=int, required=True,
+                        help="Explicit bootstrap randomization value supplied by the caller")
     args = parser.parse_args()
     if args.bootstrap_replicates < 100:
         raise ValueError("Use at least 100 bootstrap replicates")

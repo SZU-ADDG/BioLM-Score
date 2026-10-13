@@ -48,7 +48,8 @@ if __name__ == '__main__':
 	p.add_argument('--ligand_embedding_dir', type=str, required=True,
 	               help='Directory containing per-complex ligand embeddings')
 	p.add_argument('--valnum', type=int, default=1500)
-	p.add_argument('--seeds', type=int, default=126)
+	p.add_argument('--seeds', type=int, required=True,
+				   help='Run-specific randomization value supplied explicitly by the caller')
 	p.add_argument('--hidden_dim0', type=int, default=128)
 	p.add_argument('--hidden_dim', type=int, default=128)
 	p.add_argument('--n_gaussians', type=int, default=10)

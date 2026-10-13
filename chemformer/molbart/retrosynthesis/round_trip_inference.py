@@ -82,7 +82,8 @@ def _run_test_callbacks(chemformer: Chemformer, metrics_scores: List[Dict[str, A
 
 @hydra.main(version_base=None, config_path="../config", config_name="round_trip_inference")
 def main(args) -> None:
-    util.seed_everything(args.seed)
+    if args.seed is not None:
+        util.seed_everything(args.seed)
 
     args, sampled_data_params = create_round_trip_dataset(args)
     chemformer = Chemformer(args)
