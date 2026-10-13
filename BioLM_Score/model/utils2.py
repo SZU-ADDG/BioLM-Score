@@ -192,14 +192,6 @@ class EarlyStopping(object):
 
 
 
-# def pearson_corr_loss(y, labels, eps=1e-8):
-#     vx = y - y.mean()
-#     vy = labels - labels.mean()
-#     corr = th.sum(vx * vy) / (th.sqrt(th.sum(vx ** 2) + eps) * th.sqrt(th.sum(vy ** 2) + eps))
-#     return 1 - corr  # 趋近 0 时表示高相关性
-
-
-
 def run_a_train_epoch(epoch, model, data_loader, optimizer, mdn_weight=1.0, affi_weight=1.0, aux_weight=0.001, dist_threhold=None, device='cpu'):
     model.train()
     total_loss = 0
@@ -219,13 +211,6 @@ def run_a_train_epoch(epoch, model, data_loader, optimizer, mdn_weight=1.0, affi
         bond_labels = th.argmax(bgl.edge_attr[:,:4], dim=1, keepdim=False)
 
         pi, sigma, mu, dist, atom_types, bond_types, batch = model(bgl, bgp, protein_embs, ligand_embs)
-        # try:
-        # 	pi, sigma, mu, dist, atom_types, bond_types, batch = model(bgl, bgp, protein_embs, ligand_embs, protein_mask, ligand_mask)
-        # except AssertionError as e:
-        # 	print(f"\n[Assertion Error] Batch {batch_id} failed with pdbids:")
-        # 	print(pdbids)
-
-
         mdn, prob = mdn_loss_fn(pi, sigma, mu, dist)
         mdn = mdn[th.where(dist <= model.dist_threhold)[0]]
         mdn = mdn.mean()
@@ -258,7 +243,6 @@ def run_a_train_epoch(epoch, model, data_loader, optimizer, mdn_weight=1.0, affi
         bond_loss += bond.item() * batch.unique().size(0)
         total_loss += mdn.item() + atom.item() * aux_weight + bond.item() * aux_weight
 
-        #print('Step, Total Loss: {:.3f}, MDN: {:.3f}'.format(total_loss, mdn_loss))
         if np.isinf(mdn_loss) or np.isnan(mdn_loss): break
         del bgl, bgp, atom_labels, bond_labels, pi, sigma, mu, dist, atom_types, bond_types, batch, mdn, atom, bond, affi, loss, prob, y
         th.cuda.empty_cache()
@@ -320,7 +304,7 @@ def run_an_eval_epoch(model, data_loader, pred=False, atom_contribution=False, r
                     prob = prob[th.where(dist <= dist_threhold)[0]]
                     y = scatter_add(prob, batch[th.where(dist <= dist_threhold)[0]] , dim=0, dim_size=batch.unique().size(0))
                 else:
-                    y = scatter_add(prob, batch[th.where(dist <= dist_threhold)[0]] , dim=0, dim_size=batch.unique().size(0))
+                    y = scatter_add(prob, batch, dim=0, dim_size=batch.unique().size(0))
                 #labels = labels.float().type_as(y).to(device)
 
                 #affi = F.mse_loss(y, labels)

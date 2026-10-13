@@ -158,9 +158,6 @@ def scoring(prot, lig, protein_emb,ligand_emb, modpath,
 	model.load_state_dict(checkpoint['model_state_dict']) 
 	preds = run_an_eval_epoch(model, test_loader, pred=True, dist_threhold=kwargs['dist_threhold'], device=kwargs['device'])	
 	return data.ids, preds
-	#except:
-	#	print("failed to scoring for {} and {}".format(prot, lig))
-	#	return None, None
 
 
 
@@ -181,7 +178,6 @@ def score_compound(pdbid, ligid, **args):
 
 
 def score_compound2(pdbid, ligids, **args):
-	print("%s started....."%pdbid)
 	ids_list = []
 	scores_list = []
 	for ligid in ligids:
@@ -189,11 +185,9 @@ def score_compound2(pdbid, ligids, **args):
 		if ids is not None and scores is not None:
 			ids_list.extend(ids)
 			scores_list.extend(scores)
-	print("%s finished....."%pdbid)
 	return pdbid, [ids_list, scores_list]
 
 def score_wrapper(pdbid, ligids, args):
-	print("%s started....." % pdbid)
 	ids_list = []
 	scores_list = []
 	for ligid in ligids:
@@ -201,7 +195,6 @@ def score_wrapper(pdbid, ligids, args):
 		if ids is not None and scores is not None:
 			ids_list.extend(ids)
 			scores_list.extend(scores)
-	print("%s finished....." % pdbid)
 	return pdbid, [ids_list, scores_list]
 
 
@@ -229,7 +222,6 @@ for res in results:
 	pdbid = res[0]
 	df = pd.DataFrame(zip(*res[1]),columns=["#code_ligand_num","score"])
 	df["#code_ligand_num"] = df["#code_ligand_num"].str.split("-").apply(lambda x : x[0])
-	# print(df)
 	df.to_csv(outdir / f"{pdbid}_score.dat", index=False, sep="\t")
 
 with open(Path(args["output_dir"]) / f"{args['outprefix']}_screening.pkl","wb") as dbFile:

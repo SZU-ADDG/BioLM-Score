@@ -22,44 +22,6 @@ METAL = ["LI","NA","K","RB","CS","MG","TL","CU","AG","BE","NI","PT","ZN","CO","P
 RES_MAX_NATOMS=24
 
 
-# def prot_to_graph(prot, cutoff):
-#     """obtain the residue graphs"""
-#     u = mda.Universe(prot)
-#
-#     # Add nodes
-#     num_residues = len(u.residues)
-#
-#     res_feats = np.array([calc_res_features(res) for res in u.residues])
-#     edgeids, distm = obatin_edge(u, cutoff)
-#     src_list, dst_list = zip(*edgeids)
-#
-#     ca_pos = th.tensor(np.array([obtain_ca_pos(res) for res in u.residues]))
-#     center_pos = th.tensor(np.array([
-#         res.atoms.center_of_mass() if (np.all(np.isfinite(res.atoms.masses)) and np.sum(res.atoms.masses) > 0)
-#         else res.atoms.center_of_geometry()
-#         for res in u.residues
-#     ]), dtype=th.float32)
-#     dis_matx_ca = distance_matrix(ca_pos, ca_pos)
-#     cadist = th.tensor([dis_matx_ca[i,j] for i,j in edgeids]) * 0.1
-#     dis_matx_center = distance_matrix(center_pos, center_pos)
-#     cedist = th.tensor([dis_matx_center[i,j] for i,j in edgeids]) * 0.1
-#     edge_connect = th.tensor(np.array([check_connect(u, x, y) for x,y in edgeids]))
-#     edge_feats = th.cat([edge_connect.view(-1,1), cadist.view(-1,1), cedist.view(-1,1), th.tensor(distm)], dim=1)
-#
-#     # res_max_natoms = max([len(res.atoms) for res in u.residues])
-#     res_coods = th.tensor(np.array([np.concatenate([res.atoms.positions, np.full((RES_MAX_NATOMS-len(res.atoms), 3), np.nan)],axis=0) for res in u.residues]))
-#     g = Data(x=th.tensor(res_feats, dtype=th.float),
-#             edge_index=th.tensor([src_list, dst_list]),
-#             pos=res_coods,
-#             edge_attr=th.tensor(np.array(edge_feats), dtype=th.float))
-#     if th.isnan(g.x).any() or th.isnan(g.edge_attr).any():
-#         print(f"[NaN Detected] Protein graph from {prot} has NaN in node features!")
-
-    #g.ndata.pop("ca_pos")
-    #g.ndata.pop("center_pos")
-    #g.ndata["pos"] = th.tensor(np.array([np.concatenate([res.atoms.positions, np.full((RES_MAX_NATOMS-len(res.atoms), 3), np.nan)],axis=0) for res in u.residues]))
-    # return g
-
 def prot_to_graph(prot, cutoff):
     """obtain the residue graphs"""
     u = mda.Universe(prot)
@@ -284,23 +246,23 @@ def load_mol(molpath, explicit_H=False, use_chirality=True):
     if re.search(r"\.pdb$", molpath, flags=re.IGNORECASE):
         mol = None
 
-        # 1) 正常读取（你原来的逻辑）
+        # 1) Try the normal RDKit reader.
         try:
             mol = Chem.MolFromPDBFile(molpath, removeHs=not explicit_H)
         except Exception:
             mol = None
 
-        # 2) 若读取失败（包括返回 None 或抛异常），走 fallback
+        # 2) Fall back to unsanitized loading if reading failed.
         if mol is None:
             mol = Chem.MolFromPDBFile(molpath, sanitize=False, removeHs=False)
             if mol is None:
                 raise ValueError("RDKit failed to read PDB even with sanitize=False")
 
-            # 忽略/清空电荷
+            # Clear formal charges for the fallback molecule.
             for a in mol.GetAtoms():
                 a.SetFormalCharge(0)
 
-            # 可选：尝试 sanitize，但不让它中断
+            # Try sanitization without making it a hard failure.
             try:
                 Chem.SanitizeMol(mol, catchErrors=True)
             except Exception:
@@ -450,7 +412,7 @@ def main():
     else:
         results = []
         for i, pdbid in enumerate(pdbids):
-            # 序列特征和图特征无法对应的情况
+            # Skip complexes with known sequence/graph correspondence issues.
             if pdbid in ['1pum','4ucs', '2ylc', '4fxf', '4ucv','4ucr','4uvb', '4uco', '1utt', '4aaw']:
                 continue
             results.append(pdbbind_handle(pdbid,i,  args))

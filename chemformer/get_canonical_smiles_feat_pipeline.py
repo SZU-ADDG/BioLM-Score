@@ -30,7 +30,7 @@ log_file_path = str(args.output_dir / "failed_get_ligand_feature.log")
 batch_size = args.batch_size
 seq_len = util.DEFAULT_MAX_SEQ_LEN
 
-# === 非原子 token 表
+# Non-atom token vocabulary.
 non_atomic_tokens = [
     "1", "2", "3", "4", "5", "6", "7", "8", "9",
     "(", ")", ".", "=", "#", "-", "/", "\\", ":",
@@ -38,7 +38,7 @@ non_atomic_tokens = [
     "^", "&", "<PAD>", "<MASK>", "<SEP>"
 ] + [f"<UNUSED_{i}>" for i in range(200)] + [f"%{i}" for i in range(10, 100)]
 
-# === 初始化 ===
+# Initialize the tokenizer and model.
 device = torch.device(args.device)
 tokenizer = ChemformerTokenizer(filename=vocabulary_path)
 vocabulary_size = len(tokenizer)
@@ -75,7 +75,7 @@ def get_ligand_atom_features(sdf_path, model, tokenizer, device, seq_len, non_at
             print(f"Error processing ligand {i}: {e}")
             smiles_list.append(None)
 
-    # 过滤 None
+    # Remove failed molecule parses.
     valid_indices = [i for i, s in enumerate(smiles_list) if s is not None]
     smiles_list = [smiles_list[i] for i in valid_indices]
     lig_features = []
@@ -133,4 +133,4 @@ for subdir in os.listdir(root_dir):
         feat = np.asarray(lig_features[0], dtype=np.float32)  # shape: (num_atoms, hidden_dim)
 
         save_path = os.path.join(out_path, f"{subdir}_ligand_features.npy")
-        np.save(save_path, feat)  # 纯数值 ndarray，不是 object
+        np.save(save_path, feat)  # Numeric ndarray, not an object array.

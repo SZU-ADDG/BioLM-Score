@@ -2,7 +2,7 @@
 
 Research code for protein–ligand scoring and the experiments reported in the accompanying study. This repository provides model code, preprocessing and embedding-generation entry points, evaluation scripts, and lightweight reproducibility identifiers. It does **not** redistribute benchmark structures, poses, activity labels, per-complex embeddings, pretrained model weights, or trained checkpoints.
 
-## Reproduce the reported results
+## Reproduce the experiments
 
 Start with the [experiment guide](docs/REPRODUCIBILITY.md), which maps each main-text result to its scripts and gives path-based command templates. It covers standard PDBbind/CASF-2016 evaluation, DEKOIS 2.0, BDB2020+, LP-PDBBind, time-split evaluation, and the protein-LM shuffle controls.
 

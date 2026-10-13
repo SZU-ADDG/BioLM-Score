@@ -114,85 +114,6 @@ class PDBbindDataset(Dataset):
 		train_inds = np.setdiff1d(np.arange(len(self.pdbids)),val_inds)
 		return train_inds, val_inds
 
-#
-# class PDBbindDataset(Dataset):
-# 	def __init__(self,
-# 				 ids=None,
-# 				 ligs=None,
-# 				 prots=None,
-# 				 labels=None,
-# 				 ):
-# 		super(PDBbindDataset, self).__init__()
-# 		self.labels = labels
-# 		if isinstance(ids, np.ndarray) or isinstance(ids, list):
-# 			self.pdbids = ids
-# 		else:
-# 			try:
-# 				self.pdbids = np.load(ids)
-# 			except:
-# 				raise ValueError('the variable "ids" should be numpy.ndarray or list or a file to store numpy.ndarray')
-# 			if self.pdbids.shape[0] == 1:
-# 				pass
-# 			elif self.pdbids.shape[0] == 2:
-# 				self.labels = self.pdbids[-1].astype(float)
-# 				self.pdbids = self.pdbids[0]
-# 			else:
-# 				raise ValueError('the file to store numpy.ndarray should have one/two dimensions')
-#
-# 		if isinstance(ligs, np.ndarray) or isinstance(ligs, tuple) or isinstance(ligs, list):
-# 			if isinstance(ligs[0], Data):
-# 				self.gls = ligs
-# 			else:
-# 				raise ValueError(
-# 					'the variable "ligs" should be a set of (or a file to store) torch_geometric.data.Data objects.')
-# 		else:
-# 			try:
-# 				self.gls = th.load(ligs)
-# 			except:
-# 				raise ValueError(
-# 					'the variable "ligs" should be a set of (or a file to store) torch_geometric.data.Data objects.')
-#
-# 		if isinstance(prots, np.ndarray) or isinstance(prots, th.Tensor) or isinstance(prots, list):
-# 			if isinstance(prots[0], Data):
-# 				self.gps = prots
-# 			else:
-# 				raise ValueError(
-# 					'the variable "prots" should be a set of (or a file to store) torch_geometric.data.Data objects.')
-# 		else:
-# 			try:
-# 				self.gps = th.load(prots)
-# 			except:
-# 				raise ValueError(
-# 					'the variable "prots" should be a set of (or a file to store) torch_geometric.data.Data objects.')
-#
-# 		self.gls = Batch.from_data_list(self.gls)
-# 		self.gps = Batch.from_data_list(self.gps)
-# 		assert len(self.pdbids) == self.gls.num_graphs == self.gps.num_graphs
-# 		if self.labels is None:
-# 			self.labels = th.zeros(len(self.pdbids))
-# 		else:
-# 			self.labels = th.tensor(self.labels)
-#
-# 	def len(self):
-# 		return len(self.pdbids)
-#
-# 	def get(self, idx):
-# 		pdbid = self.pdbids[idx]
-# 		gp = self.gps[idx]
-# 		gl = self.gls[idx]
-# 		label = self.labels[idx]
-# 		return pdbid, gp, gl, label
-
-	def train_and_test_split(self, valfrac=0.2, valnum=None, seed=0):
-		# random.seed(seed)
-		np.random.seed(seed)
-		if valnum is None:
-			valnum = int(valfrac * len(self.pdbids))
-		val_inds = np.random.choice(np.arange(len(self.pdbids)), valnum, replace=False)
-		train_inds = np.setdiff1d(np.arange(len(self.pdbids)), val_inds)
-		return train_inds, val_inds
-
-
 class VSDataset(Dataset):
 	def __init__(self,  
 				ids=None,
@@ -328,7 +249,6 @@ class VSDataset(Dataset):
 			lig = Chem.RenumberAtoms(lig, m_order)
 			gx = mol_to_graph(lig, explicit_H=self.explicit_H, use_chirality=self.use_chirality)
 		except:
-			# print("failed to scoring for {} and {}".format(self.gp, lig))
 			return None
 		return gx
 
@@ -478,7 +398,6 @@ class VSDataset2(Dataset):
             lig_reordered = Chem.RenumberAtoms(lig, m_order)
             gx = mol_to_graph(lig_reordered, explicit_H=self.explicit_H, use_chirality=self.use_chirality)
         except:
-            # print("failed to scoring for {} and {}".format(self.gp, lig))
             return None
         return gx
 

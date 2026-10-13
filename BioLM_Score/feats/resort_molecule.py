@@ -6,7 +6,7 @@ from pathlib import Path
 
 
 def resort_mol(dataset_path, output_csv="resorted_mol_info.csv"):
-    records = []  # 用于保存所有结果
+    records = []  # Store one record per processed ligand.
 
     for root, dirs, files in os.walk(dataset_path):
         for file in files:
@@ -14,43 +14,42 @@ def resort_mol(dataset_path, output_csv="resorted_mol_info.csv"):
                 mol_file = os.path.join(root, file)
                 out_file = os.path.join(root, file.rsplit('.', 1)[0] + '_sort.sdf')
 
-                # 读取 mol2
+                # Read the MOL2 file.
                 mol = Chem.MolFromMol2File(mol_file)
                 if mol is None:
-                    print(f"读取失败: {mol_file}")
+                    print(f"Failed to read MOL2 file: {mol_file}")
                     continue
 
-                # 触发 smiles 顺序属性
+                # Trigger RDKit's canonical SMILES atom-order property.
                 try:
                     smiles = Chem.MolToSmiles(mol, canonical=True)
                     m_order = list(mol.GetPropsAsDict(includePrivate=True, includeComputed=True)['_smilesAtomOutputOrder'])
                 except Exception as e:
-                    print(f"处理失败: {mol_file}, 原因: {e}")
+                    print(f"Failed to process {mol_file}: {e}")
                     continue
 
-                # 重排原子顺序
+                # Reorder atoms to match the canonical SMILES order.
                 renum_mol = Chem.RenumberAtoms(mol, m_order)
-                # Chem.SanitizeMol(renum_mol)
 
-                # 写入 SDF 文件
+                # Write the reordered molecule.
                 w = Chem.SDWriter(out_file)
                 w.write(renum_mol)
                 w.close()
 
-                # 提取原子符号顺序
+                # Record the atom-symbol order.
                 mol_atoms = [atom.GetSymbol() for atom in renum_mol.GetAtoms()]
 
-                # 记录信息
+                # Record metadata.
                 records.append({
                     "pdbid": file.rsplit('_')[0],
                     "smiles": smiles,
                     "atom_sequence": " ".join(mol_atoms)
                 })
 
-    # 保存为 CSV
+    # Save the metadata table.
     df = pd.DataFrame(records)
     df.to_csv(output_csv, index=False)
-    print(f"已保存信息至: {output_csv}")
+    print(f"Metadata saved to: {output_csv}")
 
 
 if __name__ == "__main__":

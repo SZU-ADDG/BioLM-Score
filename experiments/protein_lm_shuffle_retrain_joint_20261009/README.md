@@ -1,6 +1,6 @@
 # Protein-LM shuffle controls (joint GatedGCN)
 
-This directory contains the training and evaluation code for the two training-stage protein-LM shuffle controls reported with the paper: `within_pocket_lm_shuffle` and `cross_target_lm_shuffle`. It contains source code and a lightweight identifier/group map only. It does not contain benchmark structures, affinity/activity labels, graph tensors, embeddings, checkpoints, or server logs.
+This directory contains the training and evaluation code for the two training-stage protein-LM shuffle controls used in the study: `within_pocket_lm_shuffle` and `cross_target_lm_shuffle`. It contains source code and a lightweight identifier/group map only. It does not contain benchmark structures, affinity/activity labels, graph tensors, embeddings, checkpoints, or server logs.
 
 The experiment workers are intended for Linux with CUDA; some use POSIX file locks and the CUDA/PyTorch-Geometric stack. GitHub Desktop on Windows can sync the source, but is not the supported runtime for model training or inference.
 
@@ -8,7 +8,7 @@ The experiment workers are intended for Linux with CUDA; some use POSIX file loc
 
 Obtain PDBbind v2020 and CASF-2016 from their providers, prepare the PDBbind training graphs with the main repository's documented graph-preparation procedure, and generate protein and ligand embeddings with the scripts in `esm3/` and `chemformer/`. The embedding arrays are local generated inputs; they are not GitHub artifacts. Keep the original trained ESM-C/Chemformer weights separate and follow their providers' terms. The PDBbind sample IDs and CASF exclusions are read from the prepared local `v2020_train_ids.npy` and `BioLM_Score/data/casf_excluded_ids.txt`.
 
-The cross-target shuffle uses the committed identifier-only file `reproducibility/identifiers/PDBbind_v2020_MMseqs2_100_80_target_groups.tsv`. Its two columns are representative PDB ID and member PDB ID. This is the exact donor-exclusion map used for the reported run: 19,015 members, SHA-256 `67d37046dad63981fe4bd222c105246df27bec9cf36c71a51a1d1e4609069e20`. Groups were defined by MMseqs2 at 100% sequence identity with bidirectional sequence coverage of at least 80%; the file contains no sequence or structural data. The MMseqs2 executable version was not retained in the available run metadata, so use this frozen, hash-checked map rather than silently regenerating a potentially different one.
+The cross-target shuffle uses the committed identifier-only file `reproducibility/identifiers/PDBbind_v2020_MMseqs2_100_80_target_groups.tsv`. Its two columns are representative PDB ID and member PDB ID. This is the exact donor-exclusion map used by the experiment: 19,015 members, SHA-256 `67d37046dad63981fe4bd222c105246df27bec9cf36c71a51a1d1e4609069e20`. Groups were defined by MMseqs2 at 100% sequence identity with bidirectional sequence coverage of at least 80%; the file contains no sequence or structural data. The MMseqs2 executable version was not retained in the available run metadata, so use this frozen, hash-checked map rather than silently regenerating a potentially different one.
 
 ## Build local embedding banks
 
@@ -27,7 +27,7 @@ python experiments/protein_lm_shuffle_retrain_joint_20261009/runtime/prepare_shu
 
 ## Train one control/checkpoint
 
-The reported setup is joint BioLM-Score GatedGCN training from scratch, with both protein and ligand LM features enabled, 17,515 training complexes and a seed-matched 1,500-complex validation set. It uses ordinary random mini-batches (batch size 64), learning rate `1e-3`, weight decay `1e-5`, dropout `0.15`, auxiliary-loss weight `1e-3`, 7 Å training cutoff, 5 Å scoring cutoff, maximum 2,000 epochs, and patience 70. The model seed is 8, 23, or 24. The shuffle RNG seed is `20261009 + model_seed` (20261017, 20261032, or 20261033).
+The training setup is joint BioLM-Score GatedGCN training from scratch, with both protein and ligand LM features enabled, 17,515 training complexes and a seed-matched 1,500-complex validation set. It uses ordinary random mini-batches (batch size 64), learning rate `1e-3`, weight decay `1e-5`, dropout `0.15`, auxiliary-loss weight `1e-3`, 7 Å training cutoff, 5 Å scoring cutoff, maximum 2,000 epochs, and patience 70. The model seed is 8, 23, or 24. The shuffle RNG seed is `20261009 + model_seed` (20261017, 20261032, or 20261033).
 
 Run the command once for each model seed and control. For example:
 
@@ -56,7 +56,7 @@ python experiments/protein_lm_shuffle_retrain_joint_20261009/runtime/dekois_stri
   --shuffle-seed 20261017 --write-descriptors
 ```
 
-Repeat for all 81 identifiers in `reproducibility/identifiers/DEKOIS2.0_target_ids.txt` and for each seed, using the matching checkpoint and derived shuffle seed. The worker emits pose-level raw scores for each control/checkpoint; `scripts/analyze_shuffle_dekois.py` reduces each compound to its maximum-scoring pose and reports AUROC, BEDROC80.5, and EF1%, along with checkpoint-level mean and sample SD. The per-checkpoint CSVs are intermediate audit data; report the aggregate mean ± sample SD in the manuscript rather than listing all checkpoint values. Optional target-level paired tests require a per-target/per-seed baseline metrics CSV for Full BioLM-Score and Graph-only/GenScore.
+Repeat for all 81 identifiers in `reproducibility/identifiers/DEKOIS2.0_target_ids.txt` and for each seed, using the matching checkpoint and derived shuffle seed. The worker emits pose-level raw scores for each control/checkpoint; `scripts/analyze_shuffle_dekois.py` reduces each compound to its maximum-scoring pose and reports AUROC, BEDROC80.5, and EF1%, along with checkpoint-level mean and sample SD. The per-checkpoint CSVs are intermediate audit data; for summary reporting, use the aggregate mean ± sample SD rather than listing all checkpoint values. Optional target-level paired tests require a per-target/per-seed baseline metrics CSV for Full BioLM-Score and Graph-only/GenScore.
 
 ```bash
 python scripts/analyze_shuffle_dekois.py \
@@ -72,4 +72,4 @@ python scripts/analyze_shuffle_dekois.py \
 
 ## Checkpoint distribution
 
-Checkpoints are intentionally excluded from Git. If the authors elect to distribute the six shuffle-control checkpoints, upload them as a versioned Zenodo record, publish the DOI, and record each filename, model seed, control, byte size, and SHA-256 in the paper/repository release notes. The existing Zenodo record cited by the root README contains the earlier main BioLM-Score/GenScore weights; it must not be assumed to contain these later shuffle-control checkpoints.
+Checkpoints are intentionally excluded from Git. If the checkpoints are distributed, upload the six shuffle-control checkpoints as a versioned Zenodo record, publish the DOI, and record each filename, model seed, control, byte size, and SHA-256 in the paper/repository release notes. The existing Zenodo record cited by the root README contains the earlier main BioLM-Score/GenScore weights; it must not be assumed to contain these later shuffle-control checkpoints.

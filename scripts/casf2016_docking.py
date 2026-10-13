@@ -159,9 +159,6 @@ def scoring(prot, lig, protein_emb,ligand_emb, modpath,
 	model.load_state_dict(checkpoint['model_state_dict']) 
 	preds = run_an_eval_epoch(model, test_loader, pred=True, dist_threhold=kwargs['dist_threhold'], device=kwargs['device'])	
 	return data.ids, preds
-	#except:
-	#	print("failed to scoring for {} and {}".format(prot, lig))
-	#	return None, None
 
 
 
@@ -199,18 +196,14 @@ def score_compound0(pdbid, prefix):
 
 
 def score_compoundxxx(pdbid,prefix):
-	print("%s started....."%pdbid)
 	ids1, scores1 = score_compound(pdbid, prefix)
 	ids2, scores2 = score_compound0(pdbid, prefix)
-	print("%s finished....."%pdbid)
 	return ids1+ids2, np.append(scores1,scores2)
 
 def score_compoundxxxx(args):
 	pdbid, prefix = args
-	print("%s started....."%pdbid)
 	ids1, scores1 = score_compound(pdbid, prefix)
 	ids2, scores2 = score_compound0(pdbid, prefix)
-	print("%s finished....."%pdbid)
 	return ids1+ids2, np.append(scores1,scores2)
 
 

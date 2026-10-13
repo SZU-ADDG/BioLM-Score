@@ -529,40 +529,6 @@ class BioLLMScore(nn.Module):
         else:
             self.lig_proj = None
 
-        # self.prot_proj = nn.Sequential(
-        #     nn.LayerNorm(1152),
-        #     nn.Linear(1152, 512),
-        #     nn.ELU(),
-        #     nn.Dropout(p=dropout_rate),
-        #     nn.Linear(512, in_channels*2),
-        #     nn.ELU(),
-        #     nn.Dropout(p=dropout_rate),
-        #     nn.Linear(in_channels*2, in_channels),
-        # )
-        #
-        # # embeddings from combined model
-        # self.lig_proj = nn.Sequential(
-        #     nn.LayerNorm(1024),
-        #     nn.Linear(1024, 512),
-        #     nn.ELU(),
-        #     nn.Dropout(p=dropout_rate),
-        #     nn.Linear(512, in_channels*2),
-        #     nn.ELU(),
-        #     nn.Dropout(p=dropout_rate),
-        #     nn.Linear(in_channels * 2, in_channels),
-        # )
-
-        # self.prot_proj = nn.Sequential(
-        #     nn.LayerNorm(1152),
-        #     nn.Linear(1152, 128)
-        # )
-        #
-        # # embeddings from combined model
-        # self.lig_proj = nn.Sequential(
-        #     nn.LayerNorm(1024),
-        #     nn.Linear(1024, 128)
-        # )
-
         if self.use_gnn and self.use_protein_lm:
             self.target_fuse = nn.Sequential(nn.Linear(in_channels * 2, in_channels),
                                             nn.BatchNorm1d(in_channels),
@@ -582,15 +548,6 @@ class BioLLMScore(nn.Module):
                                  nn.ELU(),
                                  nn.Dropout(p=dropout_rate))
 
-        # self.MLP = nn.Sequential(nn.Linear(in_channels * 2, in_channels),
-        #                          nn.BatchNorm1d(in_channels),
-        #                          nn.ELU(),
-        #                          nn.Dropout(p=dropout_rate),
-        #                          nn.Linear(in_channels, hidden_dim),
-        #                          nn.BatchNorm1d(hidden_dim),
-        #                          nn.ELU(),
-        #                          nn.Dropout(p=dropout_rate)
-        #                          )
         self.z_pi = nn.Linear(hidden_dim, n_gaussians)
         self.z_sigma = nn.Linear(hidden_dim, n_gaussians)
         self.z_mu = nn.Linear(hidden_dim, n_gaussians)
@@ -674,7 +631,6 @@ class BioLLMScore(nn.Module):
         sigma = F.elu(self.z_sigma(C)) + 1.1
         mu = F.elu(self.z_mu(C)) + 1
         # mu = F.softplus(self.z_mu(C))
-        # sigma = F.softplus(self.z_sigma(C)) + 1e-2  # 更平滑且数值安全
 
         atom_types = self.atom_types(ligand_node_features)
         bond_types = self.bond_types(th.cat([

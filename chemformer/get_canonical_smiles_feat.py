@@ -29,7 +29,7 @@ log_file_path = args.log_file
 batch_size = args.batch_size
 seq_len = util.DEFAULT_MAX_SEQ_LEN
 
-# === 非原子 token 表
+# Non-atom token vocabulary.
 non_atomic_tokens = [
     "1", "2", "3", "4", "5", "6", "7", "8", "9",
     "(", ")", ".", "=", "#", "-", "/", "\\", ":",
@@ -37,7 +37,7 @@ non_atomic_tokens = [
     "^", "&", "<PAD>", "<MASK>", "<SEP>"
 ] + [f"<UNUSED_{i}>" for i in range(200)] + [f"%{i}" for i in range(10, 100)]
 
-# === 初始化 ===
+# Initialize the tokenizer and model.
 device = torch.device(args.device)
 tokenizer = ChemformerTokenizer(filename=vocabulary_path)
 vocabulary_size = len(tokenizer)
@@ -52,7 +52,7 @@ df = pd.read_csv(input_csv_path)
 os.makedirs(output_dir, exist_ok=True)
 os.makedirs(os.path.dirname(os.path.abspath(log_file_path)), exist_ok=True)
 
-# === 批处理 + 记录错误 ===
+# Process batches and record failures.
 with torch.no_grad(), open(log_file_path, 'w') as log_file:
     for i in tqdm(range(0, len(df), batch_size), desc="Generating atom features"):
         batch_df = df.iloc[i:i+batch_size]
@@ -67,7 +67,7 @@ with torch.no_grad(), open(log_file_path, 'w') as log_file:
 
         inputs, masks, atom_keeps = [], [], []
 
-        #生成整个batch的mask，用于mask掉非原子token
+        # Build a mask that excludes non-atom tokens for the whole batch.
         for tokens, s in zip(tokens_list, tokenized_input):
             atom_keep_indices = [t not in non_atomic_tokens for t in tokens]
             # atom_keep = tokens[atom_keep_indices]
@@ -84,18 +84,15 @@ with torch.no_grad(), open(log_file_path, 'w') as log_file:
             "encoder_pad_mask": encoder_pad_mask,
         }
 
-        # === 模型前向 ===
+        # Model forward pass.
         outputs = model.encode(batch)  # [seq_len, batch, hidden]
-        # print(outputs.shape)
         outputs = outputs.permute(1, 0, 2)  # [batch, seq_len, hidden]
         pad_mask = ~batch['encoder_pad_mask'].T  # [batch, seq_len]
 
         for j, (out, mask, keep, pdbid) in enumerate(zip(outputs, pad_mask, atom_keeps, pdbid_list)):
-            valid_out = out[mask]  # 去除 padding
+            valid_out = out[mask]  # Remove padding positions.
             try:
                 atom_feature = valid_out[keep]
-                # print(map_order)
-
                 np.save(os.path.join(output_dir, f"{pdbid}.npy"), atom_feature.cpu().numpy())
             except Exception as e:
                 log_file.write(f"{pdbid}: Exception during processing - {str(e)}\n")

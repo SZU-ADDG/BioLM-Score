@@ -155,9 +155,6 @@ def scoring(ids, prots, ligs, modpath,
 	model.load_state_dict(checkpoint['model_state_dict']) 
 	preds = run_an_eval_epoch(model, test_loader, pred=True, dist_threhold=kwargs['dist_threhold'], device=kwargs['device'])	
 	return data.pdbids, preds
-	#except:
-	#	print("failed to scoring for {} and {}".format(prot, lig))
-	#	return None, None
 
 def obtain_score_metrics(df):
 	#Calculate the Pearson correlation coefficient
@@ -196,7 +193,7 @@ def cal_PI(score, logKa):
 	return pi
 
 def obtain_rank_metrics(df):
-	df_groupby = testdf.groupby('target')
+	df_groupby = df.groupby('target')
 
 	spearman = df_groupby.apply(lambda x: x[["logKa", "score"]].corr("spearman").iloc[1, 0])
 	kendall = df_groupby.apply(lambda x: x[["logKa", "score"]].corr("kendall").iloc[1, 0])

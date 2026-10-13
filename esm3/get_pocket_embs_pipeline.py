@@ -29,25 +29,9 @@ aa_codes = {
     'ILE': 'I', 'LEU': 'L', 'MET': 'M', 'ASN': 'N',
     'PRO': 'P', 'GLN': 'Q', 'ARG': 'R', 'SER': 'S',
     'THR': 'T', 'VAL': 'V', 'TYR': 'Y', 'TRP': 'W',
-    # ESM3中保留的四种非标准氨基酸
+    # Four non-standard amino acids retained by ESM-C.
     'SEC':'U','ORN':'O'
 }
-
-# def pdb_to_sequence(prot):
-#     s = []
-#     u = mda.Universe(prot)
-#     # prev_chain = None
-#     for res in u.residues:
-#         if res.resname == 'HOH' or res.resname == 'NA':
-#             continue
-#         # curr_chain = res.segid.strip()
-#         # if prev_chain is not None and curr_chain != prev_chain:
-#         #     s.append('|')  # 插入链分隔符
-#         resn = aa_codes.get(res.resname, 'X')
-#         s.append(resn)
-#         # prev_chain = curr_chain
-#
-#     return ''.join(s)
 
 def pdb_to_sequence(prot):
     s= []
@@ -64,13 +48,13 @@ def pdb_to_sequence(prot):
 
 def get_embeddings_from_sequence(sequence, pdbid, client, failed_pdbids_file):
     try:
-        # 创建ESMProtein对象
+        # Create the ESMProtein object.
         protein = ESMProtein(sequence=sequence)
 
-        # 将蛋白质序列转换为tensor
+        # Encode the protein sequence.
         protein_tensor = client.encode(protein)
 
-        # 获取embeddings
+        # Request residue embeddings.
         logits_output = client.logits(protein_tensor, LogitsConfig(sequence=True, return_embeddings=True))
         embeddings = logits_output.embeddings
         embeddings = embeddings.squeeze(0)
@@ -80,20 +64,20 @@ def get_embeddings_from_sequence(sequence, pdbid, client, failed_pdbids_file):
 
         embeddings = embeddings[1:-1]
 
-        # 构建过滤 mask：True 表示该位置不是“|”
+        # Keep all sequence positions; the current sequence builder emits no separators.
         keep_mask = [aa != '|' for aa in sequence]
 
         assert len(keep_mask) == embeddings.shape[0], \
             f"Length mismatch: {len(keep_mask)} vs embeddings {embeddings.shape[0]}"
 
-        # 过滤掉 | 所在位置
+        # Apply the sequence-position mask.
         filtered_embeddings = embeddings[keep_mask]
 
-        # 保存embeddings为npy文件
+        # Return the residue embeddings for saving by the caller.
         return filtered_embeddings
     except Exception as e:
         print(f"Error processing {pdbid}: {e}")
-        # 将失败的 pdbid 写入失败文件
+        # Record failed complex identifiers.
         with open(failed_pdbids_file, 'a') as file:
             file.write(f"{pdbid}:{e}\n")
 
@@ -105,20 +89,18 @@ def get_kept_indices(full_pdb_path, pocket_pdb_path):
     pocket_mol = Chem.MolFromPDBFile(pocket_pdb_path, removeHs=True, sanitize=False)
     u_pocket = mda.Universe(pocket_mol)
 
-    # 获取唯一标识符（链ID, resid, resname, icode）
+    # Build residue identifiers from chain, residue number, name, and insertion code.
     def get_residue_ids(universe):
         return [
-            (res.segid.strip(), res.resid, res.resname.strip(), getattr(res, 'icode', '').strip())  # 某些版本字段不同)
-            # (res.segid.strip(), res.resid, res.resname.strip())
+            (res.segid.strip(), res.resid, res.resname.strip(), getattr(res, 'icode', '').strip())
             for res in universe.residues if (res.resname != 'HOH' and res.resname != 'NA')
         ]
 
 
     full_residues = get_residue_ids(u_full)
     pocket_residues = get_residue_ids(u_pocket)
-    # print(len(pocket_residues))
 
-    # 获取保留和mask残基的序列索引
+    # Find sequence indices retained by the pocket structure.
     kept_indices = []
     masked_indices = []
 
@@ -132,10 +114,11 @@ def get_kept_indices(full_pdb_path, pocket_pdb_path):
         else:
             masked_indices.append(idx)
 
-    # print(len(kept_indices))
 
-    assert len(kept_indices) == len(
-        pocket_residues), f'{full_pdb_path}:口袋序列特征长度出错！len(kept_indices):{len(kept_indices)},len(pocket_residues):{len(pocket_residues)}'
+    assert len(kept_indices) == len(pocket_residues), (
+        f'{full_pdb_path}: pocket embedding length mismatch: '
+        f'kept={len(kept_indices)}, pocket={len(pocket_residues)}'
+    )
     return kept_indices
 
 def main():

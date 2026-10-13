@@ -1,4 +1,4 @@
-# Reproducing the reported experiments
+# Reproducing the experiments
 
 The commands below are entry-point templates, not self-contained downloads: benchmark files, trained checkpoints, and pretrained ESM-C/Chemformer weights must be obtained separately; per-complex embeddings are generated locally by the documented scripts. For BDB2020+ and the strict DEKOIS worker, the upstream GenScore source checkout must also be obtained separately. No command writes into a fixed machine-specific directory; all locations are supplied by the user.
 
@@ -6,7 +6,7 @@ Run `python scripts/validate_reproducibility_manifests.py` first. It checks the 
 
 ## Main and supplementary table map
 
-| Manuscript result | Data / IDs | Entry points |
+| Result | Data / IDs | Entry points |
 |---|---|---|
 | Main Table 1: standard PDBbind CASF-2016 scoring, ranking, docking, and screening | PDBbind v2020 processed complexes and CASF-2016; CASF benchmark data/labels are not bundled. | `scripts/casf2016_scoring_ranking.py`, `scripts/casf2016_docking.py`, `scripts/casf2016_screening.py`; then the CASF metric scripts supplied with the benchmark/code release. |
 | Main Table 2 and DEKOIS target-level analyses | DEKOIS 2.0x local release; target IDs and chain-query map in `reproducibility/identifiers/`. | `scripts/prepare_dekois2_metadata.py`, `scripts/dekois2_joint_worker.py`, and `scripts/analyze_dekois2.py`. The analysis entry point also consumes the completed raw scores, similarity metadata, and a Surfdock summary as documented by its CLI. |
@@ -17,7 +17,7 @@ Run `python scripts/validate_reproducibility_manifests.py` first. It checks the 
 
 ## Standard PDBbind training split
 
-For the random split, the prepared PDBbind training graph collection is passed to `scripts/train_model.py`. The script calls `PDBbindDataset.train_and_test_split(valnum=1500, seed=...)`; the held-out 1,500 complexes are sampled from that collection for validation, and the rest are used for training. This method sets NumPy's legacy RNG to the supplied seed, samples validation indices without replacement, and defines training indices with `numpy.setdiff1d`. The reported three-checkpoint comparison uses seeds 8, 23, and 24. To export and hash the exact membership lists from the same prepared ID array used by training:
+For the random split, the prepared PDBbind training graph collection is passed to `scripts/train_model.py`. The script calls `PDBbindDataset.train_and_test_split(valnum=1500, seed=...)`; the held-out 1,500 complexes are sampled from that collection for validation, and the rest are used for training. This method sets NumPy's legacy RNG to the supplied seed, samples validation indices without replacement, and defines training indices with `numpy.setdiff1d`. The three-checkpoint comparison uses seeds 8, 23, and 24. To export and hash the exact membership lists from the same prepared ID array used by training:
 
 ```bash
 python scripts/export_random_split_ids.py \
@@ -45,7 +45,7 @@ This script is the standard random-split trainer. It is not the LP-PDBBind train
 
 ## CASF-2016 commands
 
-The three entry points now take explicit paths and do not set `CUDA_VISIBLE_DEVICES` internally; select the device externally (for example, with `CUDA_VISIBLE_DEVICES=0`). Example for scoring/ranking:
+The three entry points take explicit paths and do not set `CUDA_VISIBLE_DEVICES` internally; select the device externally (for example, with `CUDA_VISIBLE_DEVICES=0`). Example for scoring/ranking:
 
 ```bash
 python scripts/casf2016_scoring_ranking.py \
@@ -86,8 +86,8 @@ python scripts/analyze_dekois2.py \
   --surfdock-summary /path/to/surfdock_target_metrics.csv
 ```
 
-The reviewer-requested association between target-level BioLM-Score gains and
-sequence similarity can then be calculated from the per-target/per-seed metric
+The association between target-level BioLM-Score gains and sequence similarity
+can be calculated from the per-target/per-seed metric
 table and the same training-reference similarity table. Supply the three
 seed-matched primary model variants explicitly; the names below match the
 template manifest. The script averages the paired BioLM-minus-GenScore metric
