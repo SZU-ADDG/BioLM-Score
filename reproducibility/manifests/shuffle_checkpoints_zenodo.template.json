@@ -2,11 +2,11 @@
   "zenodo_doi": "FILL_AFTER_THE_SHUFFLE_CHECKPOINTS_ARE_UPLOADED",
   "model": "BioLM-Score joint GatedGCN, alpha=1",
   "files": [
-    {"control": "within_pocket_lm_shuffle", "seed": 8, "filename": "within_pocket_lm_shuffle_seed8.pth", "bytes": null, "sha256": "FILL_AFTER_UPLOAD"},
-    {"control": "within_pocket_lm_shuffle", "seed": 23, "filename": "within_pocket_lm_shuffle_seed23.pth", "bytes": null, "sha256": "FILL_AFTER_UPLOAD"},
-    {"control": "within_pocket_lm_shuffle", "seed": 24, "filename": "within_pocket_lm_shuffle_seed24.pth", "bytes": null, "sha256": "FILL_AFTER_UPLOAD"},
-    {"control": "cross_target_lm_shuffle", "seed": 8, "filename": "cross_target_lm_shuffle_seed8.pth", "bytes": null, "sha256": "FILL_AFTER_UPLOAD"},
-    {"control": "cross_target_lm_shuffle", "seed": 23, "filename": "cross_target_lm_shuffle_seed23.pth", "bytes": null, "sha256": "FILL_AFTER_UPLOAD"},
-    {"control": "cross_target_lm_shuffle", "seed": 24, "filename": "cross_target_lm_shuffle_seed24.pth", "bytes": null, "sha256": "FILL_AFTER_UPLOAD"}
+    {"control": "within_pocket_lm_shuffle", "seed": "RUN_A", "filename": "within_pocket_lm_shuffle_run_A.pth", "bytes": null, "sha256": "FILL_AFTER_UPLOAD"},
+    {"control": "within_pocket_lm_shuffle", "seed": "RUN_B", "filename": "within_pocket_lm_shuffle_run_B.pth", "bytes": null, "sha256": "FILL_AFTER_UPLOAD"},
+    {"control": "within_pocket_lm_shuffle", "seed": "RUN_C", "filename": "within_pocket_lm_shuffle_run_C.pth", "bytes": null, "sha256": "FILL_AFTER_UPLOAD"},
+    {"control": "cross_target_lm_shuffle", "seed": "RUN_A", "filename": "cross_target_lm_shuffle_run_A.pth", "bytes": null, "sha256": "FILL_AFTER_UPLOAD"},
+    {"control": "cross_target_lm_shuffle", "seed": "RUN_B", "filename": "cross_target_lm_shuffle_run_B.pth", "bytes": null, "sha256": "FILL_AFTER_UPLOAD"},
+    {"control": "cross_target_lm_shuffle", "seed": "RUN_C", "filename": "cross_target_lm_shuffle_run_C.pth", "bytes": null, "sha256": "FILL_AFTER_UPLOAD"}
   ]
 }

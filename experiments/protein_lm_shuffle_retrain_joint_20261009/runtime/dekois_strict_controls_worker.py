@@ -39,6 +39,12 @@ from torch_scatter import scatter_add
 from protein_lm_shuffle import CONTROLS, ProteinLMShuffleBank
 
 
+# The zero-protein-feature condition is an inference-only intervention on a
+# full BioLM-Score checkpoint.  It is kept separate from the two training-stage
+# shuffle controls so the latter's RNG and mapping semantics remain unchanged.
+EVALUATION_CONTROLS = CONTROLS + ("zero_protein_feature",)
+
+
 @dataclass(frozen=True)
 class ModelSpec:
     variant: str
@@ -87,7 +93,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--graph-cutoff", type=float, default=10.0)
     parser.add_argument("--limit-poses", type=int)
     parser.add_argument("--write-descriptors", action="store_true")
-    parser.add_argument("--controls", nargs="+", choices=CONTROLS, default=CONTROLS)
+    parser.add_argument(
+        "--controls", nargs="+", choices=EVALUATION_CONTROLS, default=CONTROLS
+    )
     parser.add_argument("--shuffle-seed", type=int, default=20260811)
     return parser.parse_args()
 
@@ -250,10 +258,10 @@ def build_model(
         model = GenScore(ligand, protein, 128, 128, 10, 0.15, 5.0)
     checkpoint = th.load(spec.checkpoint, map_location=device)
     model.load_state_dict(checkpoint["model_state_dict"], strict=True)
-    if control == "strict_ligand_only":
+    if control == "zero_protein_feature":
         if spec.model_type != "biolm" or spec.ablation != "full":
             raise ValueError(
-                "strict_ligand_only requires a full BioLM-Score checkpoint"
+                "zero_protein_feature requires a full BioLM-Score checkpoint"
             )
         model.forward = types.MethodType(strict_ligand_only_forward, model)
     return model.to(device).eval()
@@ -463,12 +471,17 @@ def score_dataset(
             ligand_graph = ligand_graph.to(device)
             ligand_embeddings = ligand_embeddings.to(device)
             protein_counts = node_counts(protein_graph)
-            protein_embeddings = shuffle_bank.apply_batch(
-                protein_embeddings,
-                protein_counts,
-                [target] * len(batch_ids),
-                control,
-            ).to(device)
+            if control == "zero_protein_feature":
+                # The strict-ligand forward hook removes the protein-side MDN
+                # features; preserve the original embeddings and geometry.
+                protein_embeddings = protein_embeddings.to(device)
+            else:
+                protein_embeddings = shuffle_bank.apply_batch(
+                    protein_embeddings,
+                    protein_counts,
+                    [target] * len(batch_ids),
+                    control,
+                ).to(device)
             protein_input = protein_graph.clone()
             ligand_input = ligand_graph.clone()
             if spec.model_type == "biolm":
@@ -689,16 +702,16 @@ def run_target(
                 flush=True,
             )
             continue
-        model = build_model(
-            spec,
-            device,
-            PaperBioLMScore,
-            PaperBioGatedGCN,
-            BioLLMScore,
-            BioGatedGCN,
-            "none",
-        )
         for control in pending:
+            model = build_model(
+                spec,
+                device,
+                PaperBioLMScore,
+                PaperBioGatedGCN,
+                BioLLMScore,
+                BioGatedGCN,
+                control,
+            )
             rows = []
             # Geometry is model- and control-independent. Collect it once.
             collect_geometry_this_control = args.write_descriptors and not pose_geometry

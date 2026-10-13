@@ -27,49 +27,51 @@ python experiments/protein_lm_shuffle_retrain_joint_20261009/runtime/prepare_shu
 
 ## Train one control/checkpoint
 
-The training setup is joint BioLM-Score GatedGCN training from scratch, with both protein and ligand LM features enabled, 17,515 training complexes and a seed-matched 1,500-complex validation set. It uses ordinary random mini-batches (batch size 64), learning rate `1e-3`, weight decay `1e-5`, dropout `0.15`, auxiliary-loss weight `1e-3`, 7 Å training cutoff, 5 Å scoring cutoff, maximum 2,000 epochs, and patience 70. The model seed is 8, 23, or 24. The shuffle RNG seed is `20261009 + model_seed` (20261017, 20261032, or 20261033).
+The training setup is joint BioLM-Score GatedGCN training from scratch, with both protein and ligand LM features enabled, 17,515 training complexes and a seed-matched 1,500-complex validation set. It uses ordinary random mini-batches (batch size 64), learning rate `1e-3`, weight decay `1e-5`, dropout `0.15`, auxiliary-loss weight `1e-3`, 7 Å training cutoff, 5 Å scoring cutoff, maximum 2,000 epochs, and patience 70. Use the pre-specified independent run identifiers for the checkpoint set; their numeric values are intentionally not recorded in this public description. The shuffle RNG is a deterministic function of the model run identifier.
 
-Run the command once for each model seed and control. For example:
+Run the command once for each model run identifier and control. For example:
 
 ```bash
 python experiments/protein_lm_shuffle_retrain_joint_20261009/runtime/train_shuffle_joint.py \
-  --control within_pocket_lm_shuffle --seed 8 --shuffle-seed 20261009 \
+  --control within_pocket_lm_shuffle --seed "$MODEL_SEED" --shuffle-seed "$SHUFFLE_BASE_SEED" \
   --train-data-dir /path/to/prepared/pdbbind/train_data \
   --embedding-bank-dir /path/to/local/embedding_bank \
-  --output outputs/shuffle/within_seed8/best.pth
+  --output outputs/shuffle/within_${MODEL_RUN_ID}/best.pth
 ```
 
-Repeat with `--control cross_target_lm_shuffle`, and with seeds 23 and 24. The trainer adds the model seed to the base shuffle seed, writes the exact train/validation ID lists and input/configuration hashes beside the checkpoint, and retains each checkpoint independently. Do not average predictions across checkpoints.
+Repeat with `--control cross_target_lm_shuffle` and each remaining run identifier. The trainer combines the model run identifier with the base shuffle value, writes the exact train/validation ID lists and input/configuration hashes beside the checkpoint, and retains each checkpoint independently. Do not average predictions across checkpoints.
 
 ## Evaluate DEKOIS 2.0
 
-Use the six saved checkpoints as separate, seed-matched runs. The model manifest format is shown in `reproducibility/manifests/shuffle_control_model.template.json`; create a one-checkpoint manifest for each seed, set its checkpoint path, and run both controls with the same seed-specific shuffle RNG. The DEKOIS worker imports the released GenScore reference implementation as well as this repository, so make that separate upstream checkout importable in the environment.
+Use the six saved checkpoints as separate, run-matched runs. The model manifest format is shown in `reproducibility/manifests/shuffle_control_model.template.json`; create a one-checkpoint manifest for each run identifier, set its checkpoint path, and run both controls with the corresponding shuffle RNG. The DEKOIS worker imports the released GenScore reference implementation as well as this repository, so make that separate upstream checkout importable in the environment.
 
 ```bash
 python experiments/protein_lm_shuffle_retrain_joint_20261009/runtime/dekois_strict_controls_worker.py \
   --project-root /path/to/BioLM-Score \
   --data-root /path/to/prepared/DEKOIS_2.0x \
   --output-root outputs/shuffle/dekois \
-  --model-manifest /path/to/seed8_model.json \
+  --model-manifest /path/to/model_run_A.json \
   --targets 11betahsd1 17betahsd1 \
   --controls within_pocket_lm_shuffle cross_target_lm_shuffle \
-  --shuffle-seed 20261017 --write-descriptors
+  --shuffle-seed "$SHUFFLE_SEED_A" --write-descriptors
 ```
 
-Repeat for all 81 identifiers in `reproducibility/identifiers/DEKOIS2.0_target_ids.txt` and for each seed, using the matching checkpoint and derived shuffle seed. The worker emits pose-level raw scores for each control/checkpoint; `scripts/analyze_shuffle_dekois.py` reduces each compound to its maximum-scoring pose and reports AUROC, BEDROC80.5, and EF1%, along with checkpoint-level mean and sample SD. The per-checkpoint CSVs are intermediate audit data; for summary reporting, use the aggregate mean ± sample SD rather than listing all checkpoint values. Optional target-level paired tests require a per-target/per-seed baseline metrics CSV for Full BioLM-Score and Graph-only/GenScore.
+Repeat for all 81 identifiers in `reproducibility/identifiers/DEKOIS2.0_target_ids.txt` and for each independent run, using the matching checkpoint and derived shuffle value. The worker emits pose-level raw scores for each control/checkpoint; `scripts/analyze_shuffle_dekois.py` reduces each compound to its maximum-scoring pose and reports AUROC, BEDROC80.5, and EF1%, along with checkpoint-level mean and sample SD. The per-checkpoint CSVs are intermediate audit data; for summary reporting, use the aggregate mean ± sample SD rather than listing all checkpoint values. Optional target-level paired tests require a per-target/per-run baseline metrics CSV for Full BioLM-Score and Graph-only/GenScore.
+
+For the Main Table 3 zero-protein-feature diagnostic, use a full BioLM-Score checkpoint manifest with `--controls zero_protein_feature`. This is an inference-only strict-ligand intervention; it does not retrain a model and does not alter the graph, coordinates, ligand features, or pair mask.
 
 ```bash
 python scripts/analyze_shuffle_dekois.py \
   --scores-root outputs/shuffle/dekois \
-  --variants within_pocket_lm_shuffle_joint_biolm_seed8 \
-             within_pocket_lm_shuffle_joint_biolm_seed23 \
-             within_pocket_lm_shuffle_joint_biolm_seed24 \
-             cross_target_lm_shuffle_joint_biolm_seed8 \
-             cross_target_lm_shuffle_joint_biolm_seed23 \
-             cross_target_lm_shuffle_joint_biolm_seed24 \
+  --variants within_pocket_lm_shuffle_joint_biolm_run_A \
+             within_pocket_lm_shuffle_joint_biolm_run_B \
+             within_pocket_lm_shuffle_joint_biolm_run_C \
+             cross_target_lm_shuffle_joint_biolm_run_A \
+             cross_target_lm_shuffle_joint_biolm_run_B \
+             cross_target_lm_shuffle_joint_biolm_run_C \
   --output-dir outputs/shuffle/dekois/analysis
 ```
 
 ## Checkpoint distribution
 
-Checkpoints are intentionally excluded from Git. If the checkpoints are distributed, upload the six shuffle-control checkpoints as a versioned Zenodo record, publish the DOI, and record each filename, model seed, control, byte size, and SHA-256 in the paper/repository release notes. The existing Zenodo record cited by the root README contains the earlier main BioLM-Score/GenScore weights; it must not be assumed to contain these later shuffle-control checkpoints.
+Checkpoints are intentionally excluded from Git. If the checkpoints are distributed, upload the six shuffle-control checkpoints as a versioned Zenodo record, publish the DOI, and record each filename, run identifier, control, byte size, and SHA-256 in the paper/repository release notes. The existing Zenodo record cited by the root README contains the earlier main BioLM-Score/GenScore weights; it must not be assumed to contain these later shuffle-control checkpoints.

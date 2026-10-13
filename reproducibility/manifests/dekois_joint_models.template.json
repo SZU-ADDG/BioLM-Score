@@ -1,10 +1,10 @@
 {
   "models": [
-    {"variant": "full_biolm_seed8", "model_type": "biolm", "ablation": "full", "checkpoint": "../../checkpoints/mmgatedgcn_1.0_03.pth"},
-    {"variant": "full_biolm_seed23", "model_type": "biolm", "ablation": "full", "checkpoint": "../../checkpoints/mmgatedgcn_1.0_01.pth"},
-    {"variant": "full_biolm_seed24", "model_type": "biolm", "ablation": "full", "checkpoint": "../../checkpoints/mmgatedgcn_1.0_02.pth"},
-    {"variant": "graph_only_genscore_seed8", "model_type": "genscore", "ablation": "full", "checkpoint": "../../checkpoints/gatedgcn_1.0_03.pth"},
-    {"variant": "graph_only_genscore_seed23", "model_type": "genscore", "ablation": "full", "checkpoint": "../../checkpoints/gatedgcn_1.0_01.pth"},
-    {"variant": "graph_only_genscore_seed24", "model_type": "genscore", "ablation": "full", "checkpoint": "../../checkpoints/gatedgcn_1.0_02.pth"}
+    {"variant": "full_biolm_run_A", "model_type": "biolm", "ablation": "full", "checkpoint": "../../checkpoints/mmgatedgcn_run_A.pth"},
+    {"variant": "full_biolm_run_B", "model_type": "biolm", "ablation": "full", "checkpoint": "../../checkpoints/mmgatedgcn_run_B.pth"},
+    {"variant": "full_biolm_run_C", "model_type": "biolm", "ablation": "full", "checkpoint": "../../checkpoints/mmgatedgcn_run_C.pth"},
+    {"variant": "graph_only_genscore_run_A", "model_type": "genscore", "ablation": "full", "checkpoint": "../../checkpoints/gatedgcn_run_A.pth"},
+    {"variant": "graph_only_genscore_run_B", "model_type": "genscore", "ablation": "full", "checkpoint": "../../checkpoints/gatedgcn_run_B.pth"},
+    {"variant": "graph_only_genscore_run_C", "model_type": "genscore", "ablation": "full", "checkpoint": "../../checkpoints/gatedgcn_run_C.pth"}
   ]
 }

@@ -1,10 +1,10 @@
 {
   "models": [
-    {"model": "BioLM-Score", "seed": 23, "checkpoint": "../../checkpoints/mmgatedgcn_1.0_01.pth"},
-    {"model": "BioLM-Score", "seed": 24, "checkpoint": "../../checkpoints/mmgatedgcn_1.0_02.pth"},
-    {"model": "BioLM-Score", "seed": 8, "checkpoint": "../../checkpoints/mmgatedgcn_1.0_03.pth"},
-    {"model": "GenScore", "seed": 23, "checkpoint": "../../checkpoints/gatedgcn_1.0_01.pth"},
-    {"model": "GenScore", "seed": 24, "checkpoint": "../../checkpoints/gatedgcn_1.0_02.pth"},
-    {"model": "GenScore", "seed": 8, "checkpoint": "../../checkpoints/gatedgcn_1.0_03.pth"}
+    {"model": "BioLM-Score", "seed": "RUN_A", "checkpoint": "../../checkpoints/mmgatedgcn_run_A.pth"},
+    {"model": "BioLM-Score", "seed": "RUN_B", "checkpoint": "../../checkpoints/mmgatedgcn_run_B.pth"},
+    {"model": "BioLM-Score", "seed": "RUN_C", "checkpoint": "../../checkpoints/mmgatedgcn_run_C.pth"},
+    {"model": "GenScore", "seed": "RUN_A", "checkpoint": "../../checkpoints/gatedgcn_run_A.pth"},
+    {"model": "GenScore", "seed": "RUN_B", "checkpoint": "../../checkpoints/gatedgcn_run_B.pth"},
+    {"model": "GenScore", "seed": "RUN_C", "checkpoint": "../../checkpoints/gatedgcn_run_C.pth"}
   ]
 }

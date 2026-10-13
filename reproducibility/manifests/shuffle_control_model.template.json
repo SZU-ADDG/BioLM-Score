@@ -1,10 +1,10 @@
 {
   "models": [
     {
-      "variant": "joint_biolm_seed8",
+      "variant": "joint_biolm_run_A",
       "model_type": "biolm",
       "ablation": "full",
-      "checkpoint": "/absolute/path/to/the_seed8_shuffle_control_checkpoint.pth"
+      "checkpoint": "/absolute/path/to/the_run_A_shuffle_control_checkpoint.pth"
     }
   ]
 }
